@@ -1,0 +1,14 @@
+[build-system]
+requires = [
+    "bluepy",
+    "pandas",
+    "setuptools"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "read_waveplus"
+version = "0.1"
+
+[project.scripts]
+read_waveplus = "read_waveplus:main"
