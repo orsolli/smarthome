@@ -7,12 +7,11 @@ buildPythonApplication {
   src = ./.;
 
   buildInputs = [
-    pkgs.makeWrapper
+    setuptools
   ];
 
   propagatedBuildInputs = [
     bluepy
     pandas
-    setuptools
   ];
 }

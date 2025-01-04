@@ -21,7 +21,7 @@ in
 
       samplerate = mkOption {
         type = types.int;
-        default = 60;
+        default = 300;
         description = "The sample rate in seconds.";
       };
 
@@ -40,8 +40,20 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        ExecStart = "${pkgs.callPackage ./read_waveplus.nix {}}/bin/read_waveplus ${cfg.device} ${toString cfg.samplerate} ${cfg.database}";
+        ExecStart = "${pkgs.callPackage ./read_waveplus {}}/bin/read_waveplus ${cfg.device} ${toString cfg.samplerate} ${cfg.database}";
         User = "airwave";
+        Group = "airwave";
+      };
+    };
+
+    systemd.services.airwave-web = {
+      description = "Airwave Plus Web Service";
+      after = [ "network.target" ];
+      wantedBy = [ "multi-user.target" ];
+
+      serviceConfig = {
+        ExecStart = "DATABASE_PATH=${cfg.database} ${pkgs.callPackage ./web {}}/bin/start-server";
+        User = "airwave-web";
         Group = "airwave";
       };
     };
@@ -53,5 +65,12 @@ in
       createHome = true;
       group = "airwave";
     };
+
+    users.users.airwave-web = {
+      isSystemUser = true;
+      group = "airwave";
+    };
+
+    systemd.tmpfiles.rules = ["d /var/lib/airwave 1755 airwave airwave"];
   };
 }

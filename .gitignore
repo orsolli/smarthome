@@ -1,3 +1,5 @@
+venv/
 result
 __pycache__
 *.db
+*.egg-info

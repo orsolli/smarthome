@@ -1,0 +1,14 @@
+[build-system]
+requires = [ "setuptools" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "timeseries_plot"
+version = "0.1"
+dependencies = [
+    "plotly",
+    "flask"
+]
+
+[project.scripts]
+start-dev = "app:app.run"
