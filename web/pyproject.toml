@@ -12,3 +12,4 @@ dependencies = [
 
 [project.scripts]
 start-dev = "app:app.run"
+start-server = "app:start_server"

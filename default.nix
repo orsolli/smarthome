@@ -52,25 +52,20 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        ExecStart = "DATABASE_PATH=${cfg.database} ${pkgs.callPackage ./web {}}/bin/start-server";
-        User = "airwave-web";
+        ExecStart = "${pkgs.callPackage ./web {}}/bin/start-server -w 1 -b 127.0.0.1:8000 app:app";
+        User = "airwave";
         Group = "airwave";
       };
+      environment = { DATABASE_PATH = cfg.database; };
     };
 
     users.groups.airwave = {};
     users.users.airwave = {
       isSystemUser = true;
       home = "/var/lib/airwave";
-      createHome = true;
       group = "airwave";
     };
 
-    users.users.airwave-web = {
-      isSystemUser = true;
-      group = "airwave";
-    };
-
-    systemd.tmpfiles.rules = ["d /var/lib/airwave 1755 airwave airwave"];
+    #systemd.tmpfiles.rules = ["d /var/lib/airwave 1755 airwave airwave"];
   };
 }
