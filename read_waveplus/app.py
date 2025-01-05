@@ -26,13 +26,13 @@
 # Module import dependencies
 # ===============================
 
-from bluepy.btle import UUID, Peripheral, Scanner, DefaultDelegate, BTLEDisconnectError
+import asyncio
+from bleak import BleakClient
 import sqlite3
-import pandas as pd
 import sys
 import time
 import struct
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 # Set up logging
@@ -49,11 +49,12 @@ class WavePlus:
         self.curr_val_char = None
         self.mac_addr = None
         self.sn = serial_number
-        self.uuid = UUID("b42e2a68-ade7-11e4-89d3-123b93f75cba")
+        self.uuid = "b42e2a68-ade7-11e4-89d3-123b93f75cba"
         self.prev_rawdata = None
 
-    def connect(self):
+    async def discover(self):
         if self.mac_addr is None:
+            from bluepy.btle import Scanner, DefaultDelegate
             scanner = Scanner().withDelegate(DefaultDelegate())
             search_count = 0
             while self.mac_addr is None and search_count < 50:
@@ -71,11 +72,6 @@ class WavePlus:
                 logger.info("       (2) Ensure that the device is advertising.")
                 logger.info("       (3) Retry connection.")
                 sys.exit(1)
-        # Connect to device
-        if self.periph is None:
-            self.periph = Peripheral(self.mac_addr)
-        if self.curr_val_char is None:
-            self.curr_val_char = self.periph.getCharacteristics(uuid=self.uuid)[0]
 
     def parse_serial_number(self, manu_data_hex_str):
         if manu_data_hex_str is None or manu_data_hex_str == "None":
@@ -89,11 +85,12 @@ class WavePlus:
             return sn
         return "Unknown"
 
-    def read(self, compare=False):
-        if self.curr_val_char is None:
-            logger.error("Devices are not connected.")
-            sys.exit(1)
-        rawdata = self.curr_val_char.read()
+    async def read(self):
+        async with BleakClient(self.mac_addr) as client:
+            return await client.read_gatt_char(self.uuid)
+
+    def get_sensor_data(self, compare=False):
+        rawdata = asyncio.run(self.read())
         unpackeddata = struct.unpack('<BBBBHHHHHHHH', rawdata)
         sensors = Sensors()
         sensors.set(unpackeddata)
@@ -103,11 +100,6 @@ class WavePlus:
             return sensors, rawdata == prev_data
         return sensors
 
-    def disconnect(self):
-        if self.periph is not None:
-            self.periph.disconnect()
-            self.periph = None
-            self.curr_val_char = None
 
 # ===================================
 # Class Sensor and sensor definitions
@@ -149,12 +141,29 @@ class Sensors:
         return "N/A"
 
 def store_data(data, database):
-    conn = sqlite3.connect(database)
-    logger.debug(f"Connected to database {database}.")
-    df = pd.DataFrame([data])
-    df.to_sql('sensor_data', conn, if_exists='append', index=False)
-    logger.debug("Data stored in database.")
-    conn.close()
+    with sqlite3.connect(database) as conn:
+        logger.debug(f"Connected to database {database}.")
+        cursor = conn.cursor()
+        # Create table if it does not exist
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS sensor_data (
+                timestamp TIMESTAMP PRIMARY KEY,
+                humidity REAL,
+                radon_st_avg INTEGER,
+                radon_lt_avg INTEGER,
+                temperature REAL,
+                pressure REAL,
+                co2 INTEGER,
+                voc INTEGER
+            )
+        """)
+        # Insert data into table
+        cursor.execute("""
+            INSERT INTO sensor_data (timestamp, humidity, radon_st_avg, radon_lt_avg, temperature, pressure, co2, voc)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (data['timestamp'], data['humidity'], data['radon_st_avg'], data['radon_lt_avg'], data['temperature'], data['pressure'], data['co2'], data['voc']))
+        conn.commit()
+        logger.debug("Data stored in database.")
     logger.debug("Disconnected from database.")
 
 def main():
@@ -196,52 +205,50 @@ def main():
                 sys.exit(1)
 
     waveplus = WavePlus(serial_number)
-    try:
-        waveplus.mac_addr = mac_addr
-        retry_count = 0
-        one_time_message = f"Started writing data to database to {database} every {sample_period} seconds. Press Ctrl+C to stop."
-        while True:
-            try:
-                if one_time_message is None:
-                    time.sleep(sample_period)
-                logger.debug("Connecting to device.")
-                waveplus.connect()
-                logger.debug("Connected to device.")
-                sensors, unchanged = waveplus.read(compare=True)
-                logger.debug("Read sensor data.")
-                waveplus.disconnect()
-                logger.debug("Disconnected from device.")
-                if unchanged and retry_count == 0 and one_time_message is None:
-                    logger.debug("Sensor data unchanged.")
-                    continue
-                data = {
-                    'timestamp': datetime.now(),
-                    'humidity': sensors.sensor_data[SENSOR_IDX_HUMIDITY],
-                    'radon_st_avg': sensors.sensor_data[SENSOR_IDX_RADON_SHORT_TERM_AVG],
-                    'radon_lt_avg': sensors.sensor_data[SENSOR_IDX_RADON_LONG_TERM_AVG],
-                    'temperature': sensors.sensor_data[SENSOR_IDX_TEMPERATURE],
-                    'pressure': sensors.sensor_data[SENSOR_IDX_REL_ATM_PRESSURE],
-                    'co2': sensors.sensor_data[SENSOR_IDX_CO2_LVL],
-                    'voc': sensors.sensor_data[SENSOR_IDX_VOC_LVL]
-                }
-                store_data(data, database)
-                if retry_count > 0:
-                    logger.info("Connection re-established.")
-                    retry_count = 0
-                if one_time_message:
-                    logger.info(one_time_message)
-                    one_time_message = None
-            except BTLEDisconnectError:
-                retry_count += 1
-                logger.error("Connection failed.")
-                if retry_count <= 10:
-                    logger.info(f"Retrying connection. Attempt {retry_count} of 10.")
-                else:
-                    raise
-    except KeyboardInterrupt:
-        logger.info("Program terminated by user.")
-    finally:
-        waveplus.disconnect()
+    waveplus.mac_addr = mac_addr
+    retry_count = 0
+    one_time_message = f"Started writing data to database to {database} every {sample_period} seconds. Press Ctrl+C to stop."
+    while True:
+        try:
+            if one_time_message is None:
+                time.sleep(sample_period)
+            logger.debug("Connecting to device.")
+            sensors, unchanged = waveplus.get_sensor_data(compare=True)
+            logger.debug("Read sensor data.")
+            if unchanged and retry_count == 0 and one_time_message is None:
+                logger.debug("Sensor data unchanged.")
+                continue
+            data = {
+                'timestamp': datetime.now(timezone.utc),
+                'humidity': sensors.sensor_data[SENSOR_IDX_HUMIDITY],
+                'radon_st_avg': sensors.sensor_data[SENSOR_IDX_RADON_SHORT_TERM_AVG],
+                'radon_lt_avg': sensors.sensor_data[SENSOR_IDX_RADON_LONG_TERM_AVG],
+                'temperature': sensors.sensor_data[SENSOR_IDX_TEMPERATURE],
+                'pressure': sensors.sensor_data[SENSOR_IDX_REL_ATM_PRESSURE],
+                'co2': sensors.sensor_data[SENSOR_IDX_CO2_LVL],
+                'voc': sensors.sensor_data[SENSOR_IDX_VOC_LVL]
+            }
+            store_data(data, database)
+            if retry_count > 0:
+                logger.info("Connection re-established.")
+                retry_count = 0
+            if one_time_message:
+                logger.info(one_time_message)
+                one_time_message = None
+        except TimeoutError:
+            retry_count += 1
+            logger.error("Connection failed.")
+            if retry_count <= 10:
+                logger.info(f"Retrying connection. Attempt {retry_count} of 10.")
+            else:
+                raise
 
 if __name__ == "__main__":
     main()
+
+logger.error("""Migrate timezone data in sensor_data table:
+    UPDATE sensor_data
+        SET timestamp = strftime('%Y-%m-%d %H:%M:%f', timestamp, '-01:00:00.000') || '+00:00'
+        WHERE timestamp NOT LIKE '%+00:00';
+    SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 15;
+""")

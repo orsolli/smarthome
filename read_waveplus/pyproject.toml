@@ -6,8 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "read_waveplus"
 version = "0.1"
 dependencies = [
-    "bluepy",
-    "pandas"
+    "bleak"
 ]
 
 [project.scripts]

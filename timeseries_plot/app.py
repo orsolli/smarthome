@@ -85,7 +85,7 @@ def fetch_timeseries_data(sensor: SensorData, start_time=None, end_time=None):
         cursor.execute(query, params)
         data = cursor.fetchall()
     return data
-    
+
 
 @app.route('/')
 def plot():
