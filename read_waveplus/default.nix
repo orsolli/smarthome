@@ -3,15 +3,14 @@
 with lib;
 
 let
-  default_cfg = config.services.smarthome;
-  cfg = config.services.airwave;
+  cfg = config.services.smarthome;
 in
 {
   options = {
-    services.airwave = {
+    services.smarthome.airwave = {
       enable = mkOption {
         type = types.bool;
-        default = default_cfg.enable;
+        default = cfg.enable;
         description = "Enable the Airwave Plus data collection service.";
       };
 
@@ -28,20 +27,20 @@ in
 
       database = mkOption {
         type = types.str;
-        default = default_cfg.database;
+        default = cfg.database;
         description = "Path to the SQLite database.";
       };
     };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.airwave.enable {
     systemd.services.airwave = {
       description = "Airwave Plus Data Collection Service";
       after = [ "network.target" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        ExecStart = "${pkgs.callPackage ./read_waveplus.nix {}}/bin/read_waveplus ${cfg.device} ${toString cfg.samplerate} ${cfg.database}";
+        ExecStart = "${pkgs.callPackage ./read_waveplus.nix {}}/bin/read_waveplus ${cfg.airwave.device} ${toString cfg.airwave.samplerate} ${cfg.airwave.database}";
         User = "smarthome";
         Group = "smarthome";
       };

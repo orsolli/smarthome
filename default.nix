@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 
 with lib;
 
@@ -9,6 +9,7 @@ in
   imports = [
     ./read_waveplus
     ./timeseries_plot
+    ./read_han
   ];
 
   options = {
@@ -24,18 +25,13 @@ in
         default = "/var/lib/smarthome/smarthome.db";
         description = "Path to the SQLite database.";
       };
-
-      bind = mkOption {
-        type = types.str;
-        default = "127.0.0.1:8000";
-        description = "Bind address for the web server.";
-      };
     };
   };
 
   config = mkIf cfg.enable {
     systemd.tmpfiles.rules = [
       "d /var/lib/smarthome 0775 smarthome smarthome"
+      "f ${cfg.database} 0664 smarthome smarthome"
     ];
     users.groups.smarthome = {};
     users.users.smarthome = {

@@ -207,7 +207,7 @@ def main():
     waveplus = WavePlus(serial_number)
     waveplus.mac_addr = mac_addr
     retry_count = 0
-    one_time_message = f"Started writing data to database to {database} every {sample_period} seconds. Press Ctrl+C to stop."
+    one_time_message = f"Started writing data to {database} every {sample_period} seconds. Press Ctrl+C to stop."
     while True:
         try:
             if one_time_message is None:
@@ -235,20 +235,14 @@ def main():
             if one_time_message:
                 logger.info(one_time_message)
                 one_time_message = None
-        except TimeoutError:
+        except Exception as e:
             retry_count += 1
-            logger.error("Connection failed.")
+            logger.error("Connection failed.", exc_info=not isinstance(e, (TimeoutError, BrokenPipeError)))
             if retry_count <= 10:
                 logger.info(f"Retrying connection. Attempt {retry_count} of 10.")
             else:
+                logger.critical("Failed too many times.", exc_info=True)
                 raise
 
 if __name__ == "__main__":
     main()
-
-logger.error("""Migrate timezone data in sensor_data table:
-    UPDATE sensor_data
-        SET timestamp = strftime('%Y-%m-%d %H:%M:%f', timestamp, '-01:00:00.000') || '+00:00'
-        WHERE timestamp NOT LIKE '%+00:00';
-    SELECT * FROM sensor_data ORDER BY timestamp DESC LIMIT 15;
-""")
