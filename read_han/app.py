@@ -121,6 +121,20 @@ def store_data(data, database):
         logger.debug("Data stored in database.")
     logger.debug("Disconnected from database.")
 
+def read_bytes(ser):
+    """Read the raw data from serial port."""
+    byte_counter = 0
+    bytelist = []
+    while True:
+        data = ser.read_until(b'\x7e')
+        if data:
+            bytelist.extend(data)
+            if data[-1] == b'\x7e' and byte_counter > 1:
+                return bytelist
+            byte_counter = byte_counter + len(data)
+        else:
+            time.sleep(2.5)
+
 def main():
     database = sys.argv[1]
     attempts = 100
@@ -133,7 +147,7 @@ def main():
             if serial_port is None:
                 logger.debug("Connecting to device.")
                 serial_port = serial.Serial(port='/dev/ttyUSB0', baudrate=2400, timeout=5, parity='N')
-            data = parse_stream(serial_port.read_until(b'Kamstrup_V0001'))
+            data = parse_stream(read_bytes(serial_port))
             logger.debug("Read sensor data.")
             if len(data) == 0:
                 logger.warning("No data read from sensor.")
