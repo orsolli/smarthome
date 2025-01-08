@@ -124,29 +124,35 @@ def store_data(data, database):
 def read_bytes(ser):
     """Read the raw data from serial port."""
     byte_counter = 0
-    bytelist = []
+    bytelist = b"" 
+    timeout = 7
     while True:
-        data = ser.read_until(b'\x7e')
+        data = ser.read()
         if data:
-            bytelist.extend(data)
-            if data[-1] == b'\x7e' and byte_counter > 1:
+            bytelist = bytelist + data
+            if data == b'\x7e' and byte_counter > 1:
+                logger.debug(f"Read {len(bytelist)} bytes")
                 return bytelist
             byte_counter = byte_counter + len(data)
         else:
+            if timeout < 0:
+                raise TimeoutError()
+            logger.debug(f"Sleeping 2.5")
             time.sleep(2.5)
+            timeout = timeout - 2.5
 
 def main():
     database = sys.argv[1]
     attempts = 100
     retry_count = 0
     one_time_message = f"Started writing data to {database}. Press Ctrl+C to stop."
-    serial_port = serial.Serial(port='/dev/ttyUSB0', baudrate=2400, timeout=5, parity='N')
+    serial_port = serial.Serial(port='/dev/ttyUSB0', baudrate=2400, timeout=0, parity='N', stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
     while True:
         try:
             time.sleep(5 - datetime.now().second % 5)
             if serial_port is None:
                 logger.debug("Connecting to device.")
-                serial_port = serial.Serial(port='/dev/ttyUSB0', baudrate=2400, timeout=5, parity='N')
+                serial_port = serial.Serial(port='/dev/ttyUSB0', baudrate=2400, timeout=0, parity='N', stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS)
             data = parse_stream(read_bytes(serial_port))
             logger.debug("Read sensor data.")
             if len(data) == 0:
@@ -162,14 +168,13 @@ def main():
         except Exception as e:
             retry_count += 1
             logger.error("Connection failed.", exc_info=not isinstance(e, (TimeoutError, serial.serialutil.SerialException)))
-            if retry_count > attempts / 2:
-                try:
-                    if serial_port is not None:
-                        logger.warning("Closing connection.")
-                        serial_port.close()
-                    serial_port = None
-                except Exception as e:
-                    logger.error("Failed to close connection.", exc_info=True)
+            try:
+                if serial_port is not None:
+                    logger.warning("Closing connection.")
+                    serial_port.close()
+                serial_port = None
+            except Exception as e:
+                logger.error("Failed to close connection.", exc_info=True)
             if retry_count <= attempts:
                 logger.info(f"Retrying connection. Attempt {retry_count} of {attempts}.")
             else:
