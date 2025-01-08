@@ -1,31 +1,3 @@
-# MIT License
-#
-# Copyright (c) 2018 Airthings AS
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-# https://airthings.com
-
-# ===============================
-# Module import dependencies
-# ===============================
-
 import asyncio
 from bleak import BleakClient
 import sqlite3
@@ -52,45 +24,12 @@ class WavePlus:
         self.uuid = "b42e2a68-ade7-11e4-89d3-123b93f75cba"
         self.prev_rawdata = None
 
-    async def discover(self):
-        if self.mac_addr is None:
-            from bluepy.btle import Scanner, DefaultDelegate
-            scanner = Scanner().withDelegate(DefaultDelegate())
-            search_count = 0
-            while self.mac_addr is None and search_count < 50:
-                devices = scanner.scan(0.1)
-                search_count += 1
-                for dev in devices:
-                    manu_data = dev.getValueText(255)
-                    sn = self.parse_serial_number(manu_data)
-                    if sn == self.sn:
-                        self.mac_addr = dev.addr # exits the while loop on next conditional check
-                        break # exit for loop
-            if self.mac_addr is None:
-                logger.error("Could not find device.")
-                logger.info("GUIDE: (1) Please verify the serial number.")
-                logger.info("       (2) Ensure that the device is advertising.")
-                logger.info("       (3) Retry connection.")
-                sys.exit(1)
-
-    def parse_serial_number(self, manu_data_hex_str):
-        if manu_data_hex_str is None or manu_data_hex_str == "None":
-            return "Unknown"
-        manu_data = bytearray.fromhex(manu_data_hex_str)
-        if ((manu_data[1] << 8) | manu_data[0]) == 0x0334:
-            sn = manu_data[2]
-            sn |= (manu_data[3] << 8)
-            sn |= (manu_data[4] << 16)
-            sn |= (manu_data[5] << 24)
-            return sn
-        return "Unknown"
-
     async def read(self):
         async with BleakClient(self.mac_addr) as client:
             return await client.read_gatt_char(self.uuid)
 
-    def get_sensor_data(self, compare=False):
-        rawdata = asyncio.run(self.read())
+    async def get_sensor_data(self, compare=False):
+        rawdata = await self.read()
         unpackeddata = struct.unpack('<BBBBHHHHHHHH', rawdata)
         sensors = Sensors()
         sensors.set(unpackeddata)
@@ -166,6 +105,52 @@ def store_data(data, database):
         logger.debug("Data stored in database.")
     logger.debug("Disconnected from database.")
 
+async def run(
+    serial_number,
+    mac_addr,
+    database,
+    sample_period,
+):
+    waveplus = WavePlus(serial_number)
+    waveplus.mac_addr = mac_addr
+    retry_count = 0
+    one_time_message = f"Started writing data to {database} every {sample_period} seconds. Press Ctrl+C to stop."
+    while True:
+        try:
+            if one_time_message is None:
+                time.sleep(sample_period)
+            logger.debug("Connecting to device.")
+            sensors, unchanged = await waveplus.get_sensor_data(compare=True)
+            logger.debug("Read sensor data.")
+            if unchanged and retry_count == 0 and one_time_message is None:
+                logger.debug("Sensor data unchanged.")
+                continue
+            data = {
+                'timestamp': datetime.now(timezone.utc),
+                'humidity': sensors.sensor_data[SENSOR_IDX_HUMIDITY],
+                'radon_st_avg': sensors.sensor_data[SENSOR_IDX_RADON_SHORT_TERM_AVG],
+                'radon_lt_avg': sensors.sensor_data[SENSOR_IDX_RADON_LONG_TERM_AVG],
+                'temperature': sensors.sensor_data[SENSOR_IDX_TEMPERATURE],
+                'pressure': sensors.sensor_data[SENSOR_IDX_REL_ATM_PRESSURE],
+                'co2': sensors.sensor_data[SENSOR_IDX_CO2_LVL],
+                'voc': sensors.sensor_data[SENSOR_IDX_VOC_LVL]
+            }
+            store_data(data, database)
+            if retry_count > 0:
+                logger.info("Connection re-established.")
+                retry_count = 0
+            if one_time_message:
+                logger.info(one_time_message)
+                one_time_message = None
+        except Exception as e:
+            retry_count += 1
+            logger.error("Connection failed.", exc_info=not isinstance(e, (TimeoutError, BrokenPipeError)))
+            if retry_count <= 10:
+                logger.info(f"Retrying connection. Attempt {retry_count} of 10.")
+            else:
+                logger.critical("Failed too many times.", exc_info=True)
+                raise
+
 def main():
     # ===============================
     # Script guards for correct usage
@@ -204,45 +189,12 @@ def main():
                 logger.info(help_message)
                 sys.exit(1)
 
-    waveplus = WavePlus(serial_number)
-    waveplus.mac_addr = mac_addr
-    retry_count = 0
-    one_time_message = f"Started writing data to {database} every {sample_period} seconds. Press Ctrl+C to stop."
-    while True:
-        try:
-            if one_time_message is None:
-                time.sleep(sample_period)
-            logger.debug("Connecting to device.")
-            sensors, unchanged = waveplus.get_sensor_data(compare=True)
-            logger.debug("Read sensor data.")
-            if unchanged and retry_count == 0 and one_time_message is None:
-                logger.debug("Sensor data unchanged.")
-                continue
-            data = {
-                'timestamp': datetime.now(timezone.utc),
-                'humidity': sensors.sensor_data[SENSOR_IDX_HUMIDITY],
-                'radon_st_avg': sensors.sensor_data[SENSOR_IDX_RADON_SHORT_TERM_AVG],
-                'radon_lt_avg': sensors.sensor_data[SENSOR_IDX_RADON_LONG_TERM_AVG],
-                'temperature': sensors.sensor_data[SENSOR_IDX_TEMPERATURE],
-                'pressure': sensors.sensor_data[SENSOR_IDX_REL_ATM_PRESSURE],
-                'co2': sensors.sensor_data[SENSOR_IDX_CO2_LVL],
-                'voc': sensors.sensor_data[SENSOR_IDX_VOC_LVL]
-            }
-            store_data(data, database)
-            if retry_count > 0:
-                logger.info("Connection re-established.")
-                retry_count = 0
-            if one_time_message:
-                logger.info(one_time_message)
-                one_time_message = None
-        except Exception as e:
-            retry_count += 1
-            logger.error("Connection failed.", exc_info=not isinstance(e, (TimeoutError, BrokenPipeError)))
-            if retry_count <= 10:
-                logger.info(f"Retrying connection. Attempt {retry_count} of 10.")
-            else:
-                logger.critical("Failed too many times.", exc_info=True)
-                raise
+    asyncio.run(run(
+        serial_number,
+        mac_addr,
+        database,
+        sample_period,
+    ))
 
 if __name__ == "__main__":
     main()

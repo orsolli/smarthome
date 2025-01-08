@@ -40,7 +40,10 @@ in
       extraGroups = [ "dialout" ];
     };
     services.udev.extraRules = ''
-      SUBSYSTEM=="tty", KERNEL=="ttyUSB0", TAG+="systemd", ENV{MANAGER_USER_WANTS}+="read_han.service";
+      KERNEL=="ttyUSB0", \
+        ENV{MANAGER_USER_WANTS}+="read_han.service", \
+        ENV{SYSTEMD_USER_WANTS}+="read_han.service", \
+        ENV{SYSTEMD_WANTS}+="read_han.service"
     '';
   };
 }

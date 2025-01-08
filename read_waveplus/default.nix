@@ -36,7 +36,7 @@ in
   config = mkIf cfg.airwave.enable {
     systemd.services.airwave = {
       description = "Airwave Plus Data Collection Service";
-      after = [ "network.target" ];
+      after = [ "bluetooth.target" ];
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {

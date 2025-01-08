@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from enum import Enum
+from functools import lru_cache
 from flask import Flask, render_template_string, request, jsonify
 import sqlite3
 import plotly.graph_objs as go
@@ -32,6 +33,25 @@ class SensorData(Enum):
     Cumulative_hourly_active_export_kVArh = 'kamstrup_10sec.Cumulative_hourly_active_export_kVArh'
 
 def fetch_timeseries_data(sensor: SensorData, start_time=None, end_time=None):
+    # Partition the start and end times into 5-minute intervals
+    if not end_time:
+        end_time = datetime.now(timezone.utc)
+    if not start_time:
+        start_time = end_time - timedelta(hours=6)
+    start_time = start_time.replace(minute=start_time.minute - start_time.minute % 5, second=0, microsecond=0)
+    next_time = start_time + timedelta(minutes=5)
+    result = []
+    while next_time < end_time:
+        if next_time > datetime.now(timezone.utc):
+            next_time = datetime.now(timezone.utc)
+        data = fetch_timeseries_data_cached(sensor, start_time, next_time)
+        result.extend(data)
+        start_time = next_time
+        next_time = next_time + timedelta(minutes=5)
+    return result
+
+@lru_cache(maxsize=65535)
+def fetch_timeseries_data_cached(sensor: SensorData, start_time=None, end_time=None):
     assert SensorData(sensor.value) == sensor
     table, column = sensor.value.split('.')
     query = f"""
@@ -64,6 +84,8 @@ def plot_data(sensors: list[SensorData], title: str, start_time=None, end_time=N
     fig = go.Figure()
     for sensor in sensors:
         data = fetch_timeseries_data(sensor, start_time, end_time)
+        if len(data) < 1:
+            continue
         timestamps, values = zip(*data)
         fig.add_trace(go.Scatter(x=timestamps, y=values, mode='lines', name=sensor.name))
     fig.update_layout(
@@ -77,10 +99,12 @@ def plot_data(sensors: list[SensorData], title: str, start_time=None, end_time=N
 @app.route('/')
 def plot():
 
+    end_time = request.args.get('end_time')
+    end_time = datetime.fromisoformat(end_time) if end_time else None
     plot1_html = plot_data([
         SensorData.humidity,
         SensorData.temperature,
-    ], title='Temperature and humidity')
+    ], title='Temperature and humidity', end_time=end_time)
 
     plot2_html = plot_data([
         SensorData.radon_st_avg,
@@ -88,7 +112,7 @@ def plot():
         SensorData.voc
         #SensorData.pressure,
         #SensorData.co2,
-    ], title='Radon, VOC')
+    ], title='Radon, VOC', end_time=end_time)
 
     plot3_html = plot_data([
         SensorData.ACTIVE_POWER_PLUS,
@@ -105,7 +129,7 @@ def plot():
         #SensorData.Cumulative_hourly_active_export_kWh,
         #SensorData.Cumulative_hourly_reactive_import_kVArh,
         #SensorData.Cumulative_hourly_active_export_kVArh
-    ], title='HAN')
+    ], title='HAN', end_time=end_time)
 
     return render_template_string('''
         <!DOCTYPE html>
