@@ -4,21 +4,25 @@ def count_indent(line: str) -> int:
     
     Each level is represented by 4 characters:
     - │   (vertical bar + 3 spaces)
+    -     (4 spaces)
     
     Returns the number of indentation groups.
     """
-    line = line.strip()
-    if not line:
+    if not line.strip():
         return -1
     
-    # Count │ characters at the start (each represents a level)
     count = 0
     i = 0
-    while i < len(line) and line[i] == '│':
-        count += 1
-        i += 4  # Skip │ + 3 spaces
+    while i + 4 <= len(line):
+        chunk = line[i:i+4]
+        if chunk == '│   ' or chunk == '    ':
+            count += 1
+            i += 4
+        else:
+            break
     
     return count
+
 
 
 def get_node_name(line: str) -> str:

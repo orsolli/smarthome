@@ -13,7 +13,7 @@ def parse_tree_block(lines: List[str]) -> Dict[str, Any]:
     Returns:
         Tree structure dictionary
     """
-    lines = [line.strip() for line in lines if line.strip()]
+    lines = [line for line in lines if line.strip()]
     
     if not lines:
         return {'name': '.', 'type': 'directory', 'children': []}
