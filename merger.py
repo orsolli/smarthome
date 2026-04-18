@@ -38,9 +38,8 @@ def merge_trees(trees: List[Dict[str, Any]]) -> Dict[str, Any]:
             parent_node['children'].append(new_child_copy)
 
     for tree in trees:
-        # We merge the top-level children of each tree into our global root
-        for top_level_child in tree.get('children', []):
-            add_node(root, top_level_child)
+        # Add the tree itself to the root, allowing for recursive merging
+        add_node(root, tree)
             
     # Sort by name for consistent ordering
     root['children'].sort(key=lambda x: x['name'])
