@@ -15,10 +15,12 @@ class TestMergeTrees(unittest.TestCase):
         
         # Find child-a in the results
         child_a = None
-        for child in result['tree']['children']:
-            if child['name'] == '/nix/store/child-a':
-                child_a = child
-                break
+        for root in result['tree']['children']:
+            if root['name'] == '/nix/store/root':
+                child = root['children'][0]
+                if child['name'] == '/nix/store/child-a':
+                    child_a = child
+                    break
         
         self.assertIsNotNone(child_a, "child-a should exist in the merged tree")
         

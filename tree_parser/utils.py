@@ -15,7 +15,7 @@ def count_indent(line: str) -> int:
     i = 0
     while i + 4 <= len(line):
         chunk = line[i:i+4]
-        if chunk == '│   ' or chunk == '    ':
+        if chunk == '│   ' or chunk == '└───' or chunk == '├───' or chunk == '    ':
             count += 1
             i += 4
         else:
