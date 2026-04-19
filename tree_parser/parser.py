@@ -78,7 +78,7 @@ def split_into_trees(input_text: str) -> List[List[str]]:
         if not line:
             continue
         
-        if line.startswith('/nix/store'):
+        if line.startswith('/'):
             if current_block:
                 trees.append(current_block)
                 current_block = []
