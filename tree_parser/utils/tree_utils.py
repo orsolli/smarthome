@@ -24,7 +24,6 @@ def count_indent(line: str) -> int:
     return count
 
 
-
 def get_node_name(line: str) -> str:
     """Get the node name from a tree line."""
     line = line.strip()
