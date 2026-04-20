@@ -8,6 +8,7 @@ from .interfaces import (
 from .core.parser import TreeParserImpl
 from .core.merger import TreeMergerImpl
 from .core.formatter import TreeFormatterImpl
+from .core.orchestrator import TreeOrchestrator
 import json
 
 def get_tree_parser_orchestrator() -> TreeOrchestratorInterface:

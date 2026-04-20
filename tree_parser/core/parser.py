@@ -4,7 +4,7 @@ from ..utils.tree_utils import count_indent, get_node_name
 
 class TreeParserImpl(TreeParserInterface):
     def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:
-        lines = [line for line_ in lines if line_.strip()]
+        lines = [line_ for line_ in lines if line_.strip()]
         
         if not lines:
             return {'name': '.', 'type': 'directory', 'children': []}

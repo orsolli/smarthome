@@ -63,18 +63,110 @@ class TestFormatter(unittest.TestCase):
         from tree_parser.core.formatter import TreeFormatterImpl
         formatter = TreeFormatterImpl()
         tree = {
-            'name': 'root',
-            'children': [
+          "name": ".",
+          "type": "directory",
+          "children": [
+            {
+              "name": "/root/path/a.txt",
+              "str_name": "/root/path/a.txt",
+              "type": "directory",
+              "children": [
                 {
-                    'name': 'child1',
-                    'children': [
-                        {'name': 'grandchild1', 'children': []}
-                    ]
+                  "name": "/first-child",
+                  "name_str": "/first-child",
+                  "type": "directory",
+                  "children": [
+                    {
+                      "name": "first-grand-child",
+                      "name_str": "first-grand-child",
+                      "type": "directory",
+                      "children": [
+                        {
+                          "name": "/deep-child",
+                          "name_str": "/deep-child",
+                          "type": "directory",
+                          "children": []
+                        }
+                      ]
+                    },
+                    {
+                      "name": "/second/grand-child",
+                      "name_str": "/second/grand-child",
+                      "type": "directory",
+                      "children": [
+                        {
+                          "name": "snappy",
+                          "name_str": "snappy",
+                          "type": "directory",
+                          "children": []
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "name": "second/child",
+                  "name_str": "second/child",
+                  "type": "directory",
+                  "children": [
+                    {
+                      "name": "/bastard",
+                      "name_str": "/bastard",
+                      "type": "directory",
+                      "children": []
+                    }
+                  ]
                 }
-            ]
+              ]
+            }
+          ]
         }
+
         output = formatter.generate_ascii_tree(tree)
-        self.assertIn('    └───grandchild1', output)
+        self.assertIn("""/root/path/a.txt
+├───/first-child
+|   ├───first-grand-child
+|   |   └───/deep-child
+|   └───/second/grand-child
+|       └───snappy
+└───second/child
+    └───/bastard
+""", output)
+
+class TestOrchestrator(unittest.TestCase):
+    @unittest.skipIf(not os.path.exists("tree_parser/core/orchestrator.py"), "Orchestrator implementation not yet present")
+    def test_orchestrator(self):
+        from tree_parser.core.parser import TreeParserImpl
+        from tree_parser.core.merger import TreeMergerImpl
+        from tree_parser.core.formatter import TreeFormatterImpl
+        from tree_parser.core.orchestrator import TreeOrchestrator
+        parser = TreeParserImpl()
+        merger = TreeMergerImpl()
+        formatter = TreeFormatterImpl()
+        orchestrator = TreeOrchestrator(parser, merger, formatter)
+        input_text = """/root/path/a.txt
+└───/first-child
+    └───first-grand-child
+        └───/deep-child
+/root/path/a.txt
+└───second/child
+    └───/bastard
+/root/path/a.txt
+└───/first-child
+    └───/second/grand-child
+        └───snappy
+"""
+        output_text = """/root/path/a.txt
+├───/first-child
+|   ├───first-grand-child
+|   |   └───/deep-child
+|   └───/second/grand-child
+|       └───snappy
+└───second/child
+    └───/bastard
+"""
+        result = orchestrator.merge_nix_trees(input_text)
+        self.assertEqual(result["ascii"], output_text)
 
 if __name__ == "__main__":
     unittest.main()
