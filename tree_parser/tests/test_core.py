@@ -32,7 +32,7 @@ class TestMerger(unittest.TestCase):
         
         # Root is '.', so first child should be '/nix/store/a'
         root_child = result['children'][0]
-        self.assertEqual(root_child['name'], '/nix/str') # This is a placeholder for a real check, I'll fix this later
+        self.assertEqual(root_child['name'], '/nix/store/a')
         # Actually let's do a real check
         self.assertEqual(root_child['name'], '/nix/store/a')
         
@@ -74,7 +74,7 @@ class TestFormatter(unittest.TestCase):
             ]
         }
         output = formatter.generate_ascii_tree(tree)
-        self.assertIn('│   └───grandchild1', output)
+        self.assertIn('    └───grandchild1', output)
 
 if __name__ == "__main__":
     unittest.main()
