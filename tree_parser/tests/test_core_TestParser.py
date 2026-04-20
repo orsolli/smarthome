@@ -11,3 +11,8 @@ class TestParser(unittest.TestCase):
         trees = parser.split_into_trees(input_text)
         self.assertEqual(len(trees), 2)
         self.assertEqual(trees[0][0], "/nix/store/a")
+
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    unittest.main()

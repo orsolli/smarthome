@@ -2,6 +2,7 @@ import unittest
 import os
 from typing import Dict, Any
 
+
 class TestOrchestrator(unittest.TestCase):
     @unittest.skipIf(not os.path.exists("tree_parser/core/orchestrator.py"), "Orchestrator implementation not yet present")
     def test_orchestrator(self):
@@ -36,3 +37,8 @@ class TestOrchestrator(unittest.TestCase):
 """
         result = orchestrator.merge_nix_trees(input_text)
         self.assertEqual(result["ascii"], output_text)
+
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    unittest.main()

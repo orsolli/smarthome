@@ -38,3 +38,8 @@ class TestMerger(unittest.TestCase):
         result = merger.merge_trees([])
         self.assertEqual(result['name'], '.')
         self.assertEqual(result['children'], [])
+
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    unittest.main()

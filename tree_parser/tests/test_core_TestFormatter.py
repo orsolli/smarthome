@@ -85,3 +85,8 @@ class TestFormatter(unittest.TestCase):
 └───second/child
     └───/bastard
 """, output)
+
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    unittest.main()
