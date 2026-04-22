@@ -26,14 +26,14 @@ class TestOrchestrator(unittest.TestCase):
     └───/second/grand-child
         └───snappy
 """
-        output_text = """/root/path/a.txt
-├───/first-child
-|   ├───first-grand-child
-|   |   └───/deep-child
-|   └───/second/grand-child
-|       └───snappy
-└───second/child
-    └───/bastard
+        output_text = """└───/root/path/a.txt
+    ├───/first-child
+    |   ├───first-grand-child
+    |   |   └───/deep-child
+    |   └───/second/grand-child
+    |       └───snappy
+    └───second/child
+        └───/bastard
 """
         result = orchestrator.merge_nix_trees(input_text)
         self.assertEqual(result["ascii"], output_text)
