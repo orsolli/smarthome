@@ -16,59 +16,53 @@ class TestFormatter(unittest.TestCase):
         from tree_parser.core.formatter import TreeFormatterImpl
         formatter = TreeFormatterImpl()
         tree = {
-          "name": ".",
+          "name": "/root/path/a.txt",
+          "str_name": "/root/path/a.txt",
           "type": "directory",
           "children": [
             {
-              "name": "/root/path/a.txt",
-              "str_name": "/root/path/a.txt",
+              "name": "/first-child",
+              "name_str": "/first-child",
               "type": "directory",
               "children": [
                 {
-                  "name": "/first-child",
-                  "name_str": "/first-child",
+                  "name": "first-grand-child",
+                  "name_str": "first-grand-child",
                   "type": "directory",
                   "children": [
                     {
-                      "name": "first-grand-child",
-                      "name_str": "first-grand-child",
-                      "type": "directory",
-                      "children": [
-                        {
-                          "name": "/deep-child",
-                          "name_str": "/deep-child",
-                          "type": "directory",
-                          "children": []
-                        }
-                      ]
-                    },
-                    {
-                      "name": "/second/grand-child",
-                      "name_str": "/second/grand-child",
-                      "type": "directory",
-                      "children": [
-                        {
-                          "name": "snappy",
-                          "name_str": "snappy",
-                          "type": "directory",
-                          "children": []
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "name": "second/child",
-                  "name_str": "second/child",
-                  "type": "directory",
-                  "children": [
-                    {
-                      "name": "/bastard",
-                      "name_str": "/bastard",
+                      "name": "/deep-child",
+                      "name_str": "/deep-child",
                       "type": "directory",
                       "children": []
                     }
                   ]
+                },
+                {
+                  "name": "/second/grand-child",
+                  "name_str": "/second/grand-child",
+                  "type": "directory",
+                  "children": [
+                    {
+                      "name": "snappy",
+                      "name_str": "snappy",
+                      "type": "directory",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "name": "second/child",
+              "name_str": "second/child",
+              "type": "directory",
+              "children": [
+                {
+                  "name": "/bastard",
+                  "name_str": "/bastard",
+                  "type": "directory",
+                  "children": []
                 }
               ]
             }
@@ -76,7 +70,7 @@ class TestFormatter(unittest.TestCase):
         }
 
         output = formatter.generate_ascii_tree(tree)
-        self.assertIn("""/root/path/a.txt
+        self.assertEqual(output, """/root/path/a.txt
 ├───/first-child
 |   ├───first-grand-child
 |   |   └───/deep-child
@@ -84,7 +78,7 @@ class TestFormatter(unittest.TestCase):
 |       └───snappy
 └───second/child
     └───/bastard
-""", output)
+""")
 
 if __name__ == "__main__":
     import sys
