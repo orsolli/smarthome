@@ -1,0 +1,110 @@
+"""Tests for normalizer module."""
+
+import os
+import tempfile
+import unittest
+
+from normalizer import (
+    normalize_tree,
+    _severity_from_cvss,
+    _find_vuln_info,
+)
+
+
+class TestSeverityFromCvss(unittest.TestCase):
+    def test_critical_score(self):
+        """CVSS >= 9.0 returns CRITICAL."""
+        self.assertEqual(_severity_from_cvss(9.0), "CRITICAL")
+        self.assertEqual(_severity_from_cvss(9.8), "CRITICAL")
+        self.assertEqual(_severity_from_cvss(10.0), "CRITICAL")
+
+    def test_high_score(self):
+        """CVSS >= 7.0 and < 9.0 returns HIGH."""
+        self.assertEqual(_severity_from_cvss(7.0), "HIGH")
+        self.assertEqual(_severity_from_cvss(8.5), "HIGH")
+        self.assertEqual(_severity_from_cvss(8.9), "HIGH")
+
+    def test_medium_score(self):
+        """CVSS >= 4.0 and < 7.0 returns MEDIUM."""
+        self.assertEqual(_severity_from_cvss(4.0), "MEDIUM")
+        self.assertEqual(_severity_from_cvss(5.5), "MEDIUM")
+        self.assertEqual(_severity_from_cvss(6.9), "MEDIUM")
+
+    def test_low_score(self):
+        """CVSS < 4.0 returns LOW."""
+        self.assertEqual(_severity_from_cvss(0.0), "LOW")
+        self.assertEqual(_severity_from_cvss(3.9), "LOW")
+
+
+class TestFindVulnInfo(unittest.TestCase):
+    def test_found_by_pname(self):
+        """Finding by pname returns matching vuln."""
+        result = _find_vuln_info("Diff", "")
+        self.assertEqual(result["pname"], "Diff")
+
+    def test_found_by_drv_path(self):
+        """Finding by drv_path returns matching vuln."""
+        result = _find_vuln_info("", "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv")
+        self.assertEqual(result["pname"], "Diff")
+
+    def test_not_found(self):
+        """Non-existent package returns empty dict."""
+        result = _find_vuln_info("nonexistent", "")
+        self.assertEqual(result, {})
+
+
+class TestNormalizeTree(unittest.TestCase):
+    def test_empty_tree(self):
+        """Empty tree returns no records."""
+        result = normalize_tree({})
+        self.assertEqual(result, [])
+
+    def test_vulnerable_node(self):
+        """A vulnerable node produces a record."""
+        tree = {
+            "pname": "Diff",
+            "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
+            "children": [],
+        }
+        result = normalize_tree(tree)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0]["package_name"], "Diff")
+        self.assertEqual(result[0]["severity"], "CRITICAL")
+
+    def test_clean_node(self):
+        """A non-vulnerable node produces no record."""
+        tree = {
+            "pname": "clean-pkg",
+            "drv_path": "/nix/store/clean.drv",
+            "children": [],
+        }
+        result = normalize_tree(tree)
+        self.assertEqual(result, [])
+
+    def test_nested_vulnerable_nodes(self):
+        """Nested vulnerable nodes produce multiple records."""
+        tree = {
+            "pname": "ShellCheck",
+            "drv_path": "/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv",
+            "children": [
+                {
+                    "pname": "Diff",
+                    "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
+                    "children": [],
+                },
+                {
+                    "pname": "clean-pkg",
+                    "drv_path": "/nix/store/clean.drv",
+                    "children": [],
+                },
+            ],
+        }
+        result = normalize_tree(tree)
+        self.assertEqual(len(result), 2)
+        pnames = {r["package_name"] for r in result}
+        self.assertIn("ShellCheck", pnames)
+        self.assertIn("Diff", pnames)
+
+
+if __name__ == "__main__":
+    unittest.main()
