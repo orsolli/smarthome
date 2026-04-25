@@ -3,12 +3,12 @@ This plan follows a **top-down, abstract-to-concrete** structure. It begins with
 ### Phase 1: Project Foundation & Directory Management
 **Goal:** Establish the project structure and handle existing directory conflicts.
 
-1. [ ] **Directory Resolution**:
+1. [x] **Directory Resolution**:
     *   The existing directory `dev/smarthome/vulnerablilities/` contains a typo.
     *   **Action**: Rename `dev/smarthome/vulnerablilities/` to `dev/smarthome/vulnerabilities/`.
 2. [ ] **Dependency Management**:
-    *   **`tree_parser`**: Copy the `dev/tree_parser/tree_parser/` directory contents directly into `dev/smarthome/vulnerabilities/tree_parser/`. This localizes the dependency and makes it editable within the smarthome project.
-    *   **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
+    *   [x] **`tree_parser`**: Copy the `dev/tree_parser/tree_parser/` directory contents directly into `dev/smarthome/vulnerabilities/tree_parser/`. This localizes the dependency and makes it editable within the smarthome project.
+    *   [ ] **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
 3. [ ] **Core Files**:
     *   Create `app.py` (Entry point).
     *   Create `pyproject.toml` (Dependencies: `bottle`, `sqlite3`).
