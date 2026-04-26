@@ -1,7 +1,7 @@
 """Tests for mock_derivation module."""
 
 import unittest
-from vulnerabilities.mock_derivation import show_derivation
+from mock_derivation import show_derivation
 
 
 class TestMockDerivation(unittest.TestCase):
