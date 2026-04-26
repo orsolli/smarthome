@@ -6,13 +6,13 @@ This plan follows a **top-down, abstract-to-concrete** structure. It begins with
 1. [x] **Directory Resolution**:
     * The existing directory `dev/smarthome/vulnerablilities/` contains a typo.
     * **Action**: Rename `dev/smarthome/vulnerablilities/` to `dev/smarthome/vulnerabilities/`.
-2. [ ] **Dependency Management**:
+2. [x] **Dependency Management**:
     * [x] **`tree_parser`**: Copy the `dev/tree_parser/tree_parser/` directory contents directly into `dev/smarthome/vulnerabilities/tree_parser/`. This localizes the dependency and makes it editable within the smarthome project.
-    * [ ] **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
-3. [ ] **Core Files**:
-    * Create `app.py` (Entry point).
-    * Create `pyproject.toml` (Dependencies: `bottle`, `sqlite3`).
-    * Create `default.nix` and `vulnerabilities.nix` (Standard NixOS module boilerplate).
+    * [x] **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
+3. [x] **Core Files**:
+    * [x] Create `app.py` (Entry point).
+    * [ ] Create `pyproject.toml` (Dependencies: `bottle`, `sqlite3`).
+    * [ ] Create `default.nix` and `vulnerabilities.nix` (Standard NixOS module boilerplate).
 
 ### Phase 2: High-Level Technical Architecture
 **Goal:** Define the data flow and component interactions abstractly.
@@ -22,12 +22,12 @@ The system consists of three logical layers:
 1. [x] **Data Acquisition Layer**:
     * [x] Mock the nix commands so that the system can be tested on a non-nix environment.
     * [ ] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`.
-2. [ ] **Processing Layer**:
-    * [ ] **Merger**: Uses the local `tree_parser` to consolidate overlapping dependency paths into a single tree structure. The Merger assumes no cyclic dependencies in why-depends outputs. This is guaranteed by Nix's pure dependency graph.
-    * [ ] **Normalizer**: Converts the tree structure into a flat list of records suitable for database insertion.
-3. [ ] **Persistence & Serving Layer**:
+2. [x] **Processing Layer**:
+    * [x] **Merger**: Uses the local `tree_parser` to consolidate overlapping dependency paths into a single tree structure. The Merger assumes no cyclic dependencies in why-depends outputs. This is guaranteed by Nix's pure dependency graph.
+    * [x] **Normalizer**: Converts the tree structure into a flat list of records suitable for database insertion.
+3. [x] **Persistence & Serving Layer**:
     * [x] **Storage**: SQLite database stores scan history and current vulnerability states.
-    * [ ] **Server**: A Bottle web server exposes API endpoints to query the database and serve the visualization frontend.
+    * [x] **Server**: A Bottle web server exposes API endpoints to query the database and serve the visualization frontend.
 
 ### Phase 3: Visualization & Frontend Design
 **Goal:** a historical status page showing vulnerability duration in a dependency structure.
@@ -134,7 +134,7 @@ Simulates the output of `nix derivation show`, `vulnix` and `nix why-depends` by
             └───/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv
                 └───/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv
         ```
-4. [ ] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`.
+4. [x] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`.
     * **Input**: A target path (e.g., `/run/current-system`).
     * **Output**: Dependency graph trees that can be fed into the Merger.
     * *Reference*:
@@ -155,6 +155,11 @@ Simulates the output of `nix derivation show`, `vulnix` and `nix why-depends` by
 
 #### 2. `app.py` (Server & Logic)
 * **Imports**: `bottle`, `sqlite3`, `tree_parser` (local).
+* **Implemented API routes**:
+    * `GET /scan?target=...` — Triggers a full scan and stores results.
+    * `GET /vulnerabilities?since=...&until=...&package=...` — Queries vulnerability events.
+    * `GET /tree/<scan_id>` — Returns dependency tree nodes for a scan.
+    * `GET /health` — Health check endpoint.
 * **Scanner Module**:
     ```python
     def run_scan(target: str):
