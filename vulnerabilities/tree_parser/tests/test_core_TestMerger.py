@@ -2,8 +2,8 @@ import unittest
 import os
 from typing import Dict, Any
 
+@unittest.skipIf(not os.path.exists("tree_parser/core/merger.py"), "Merger implementation not yet present")
 class TestMerger(unittest.TestCase):
-    @unittest.skipIf(not os.path.exists("tree_parser/core/merger.py"), "Merger implementation not yet present")
     def test_merger_single_tree(self):
         from tree_parser.core.merger import TreeMergerImpl
         merger = TreeMergerImpl()
@@ -12,7 +12,6 @@ class TestMerger(unittest.TestCase):
         self.assertEqual(result['name'], '.')
         self.assertEqual(len(result['children']), 1)
 
-    @unittest.skipIf(not os.path.exists("tree_parser/core/merger.py"), "Merger implementation not yet present")
     def test_merger_multiple_trees_overlap(self):
         from tree_parser.core.merger import TreeMergerImpl
         merger = TreeMergerImpl()
@@ -31,7 +30,6 @@ class TestMerger(unittest.TestCase):
         self.assertIn('/nix/store/a/b', child_names)
         self.assertIn('/nix/store/a/c', child_names)
 
-    @unittest.skipIf(not os.path.exists("tree_parser/core/merger.py"), "Merger implementation not yet present")
     def test_merger_empty_trees(self):
         from tree_parser.core.merger import TreeMergerImpl
         merger = TreeMergerImpl()
