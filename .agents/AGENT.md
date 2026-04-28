@@ -22,6 +22,22 @@ Patterns, misunderstandings, and lessons learned while implementing the vulnerab
 - Mock modules replace real Nix tooling for development: `mock_derivation.py`, `mock_vulnix.py`, `mock_why_depends.py`.
 - Each has a single public function that mirrors the real tool's interface.
 
+## Pipeline interfaces
+- `interfaces.py` defines ABCs for all pipeline stages: `DerivationSource`, `VulnerabilityScanner`, `DependencyMapper`, `TreeMerger`, `TreeNormalizer`.
+- `scanner.py` provides concrete implementations (`MockDerivationSource`, etc.) and the `ScanPipeline` orchestrator class.
+- `ScanPipeline.default()` creates a fully wired pipeline with mock implementations.
+- `ScanPipeline` is constructed with dependency injection — all stages are passed as constructor arguments.
+
+### tree_parser format conversion
+- `tree_parser.merge_nix_trees()` returns a wrapper dict with `tree`, `json`, and `ascii` keys.
+- The `tree` key contains nodes with `name` (display text with tree chars) and `str_name` (path) keys.
+- `merger.py` converts this back to the original format (`pname`, `drv_path`, `children`) via `_tree_to_dict()`.
+- Always use `merged_raw.get(\"tree\", merged_raw)` to extract the actual tree node.
+
+### Normalizer deduplication
+- Merged trees can contain duplicate nodes (same package appearing in multiple paths).
+- `normalizer.py` tracks visited `(pname, drv_path)` tuples to prevent duplicate vulnerability records.
+
 ## Misunderstandings
 
 ### 1. Column names for JOIN queries
@@ -37,3 +53,4 @@ Patterns, misunderstandings, and lessons learned while implementing the vulnerab
 - How should the Merger interface integrate with tree_parser's `merge_nix_trees`?
 - What format does `tree_parser.merge_nix_trees` expect as input (raw text vs parsed dict)?
 - Should `app.py` be in `vulnerabilities/` or at the project root?
+- When should `app.py` be updated to use `ScanPipeline` instead of calling modules directly?
