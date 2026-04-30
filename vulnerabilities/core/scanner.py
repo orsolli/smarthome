@@ -1,74 +1,28 @@
-"""Concrete implementations of pipeline interfaces and the scan pipeline orchestrator.
+"""Scan pipeline orchestrator for the vulnerability scanner.
 
-This module provides:
-- Concrete implementations of each pipeline stage interface
-- ScanPipeline: orchestrates the full scan workflow
-- Default factory functions for creating instances with mock or production backends
+This module provides the ScanPipeline class that orchestrates the full
+vulnerability scan workflow by wiring together pipeline stage interfaces.
+
+Usage:
+    pipeline = ScanPipeline.default()
+    result = pipeline.run_scan("/run/current-system")
 """
 
 from typing import Any
 
 from interfaces import (
-    DependencyMapper,
-    DerivationSource,
+    DependencyMapperInterface,
+    DerivationSourceInterface,
     StorageInterface,
-    TreeMerger,
-    TreeNormalizer,
-    VulnerabilityScanner,
+    TreeMergerInterface,
+    TreeNormalizerInterface,
+    VulnerabilityScannerInterface,
 )
-from merger import merge_dependency_trees
-from mock_derivation import show_derivation
-from mock_vulnix import scan_vulnerabilities as _mock_scan_vuln
-from mock_why_depends import why_depends
-from normalizer import normalize_tree as _normalize_tree
-
-
-# --- Concrete Implementations ---
-
-
-class MockDerivationSource(DerivationSource):
-    """Mock implementation of DerivationSource using mock_derivation."""
-
-    def show_derivation(self, target: str) -> dict[str, dict[str, Any]]:
-        return show_derivation(target)
-
-
-class MockVulnerabilityScanner(VulnerabilityScanner):
-    """Mock implementation of VulnerabilityScanner using mock_vulnix."""
-
-    def scan_vulnerabilities(self, target: str) -> list[dict[str, Any]]:
-        return _mock_scan_vuln(target)
-
-
-class MockDependencyMapper(DependencyMapper):
-    """Mock implementation of DependencyMapper using mock_why_depends."""
-
-    def why_depends(
-        self, system_derivation: str, target_derivation: str
-    ) -> list[dict[str, Any]]:
-        return why_depends(system_derivation, target_derivation)
-
-
-class TreeMergerImpl(TreeMerger):
-    """Implementation of TreeMerger using the merger module."""
-
-    def merge_trees(self, dependency_trees: list[dict[str, Any]]) -> dict[str, Any]:
-        return merge_dependency_trees(dependency_trees)
-
-
-class TreeNormalizerImpl(TreeNormalizer):
-    """Implementation of TreeNormalizer using the normalizer module.
-
-    Receives vulnerability lookup via constructor so it does not
-    depend on any specific mock or production scanner.
-    """
-
-    def normalize(
-        self,
-        tree: dict[str, Any],
-        vuln_lookup: dict[str, Any],
-    ) -> list[dict[str, Any]]:
-        return _normalize_tree(tree, vuln_lookup)
+from core.merger import TreeMergerImpl
+from mock.mock_derivation import MockDerivationSource
+from mock.mock_vulnix import MockVulnerabilityScanner
+from mock.mock_why_depends import MockDependencyMapper
+from core.normalizer import TreeNormalizerImpl
 
 
 class MockStorage(StorageInterface):
@@ -125,9 +79,6 @@ class MockStorage(StorageInterface):
         return node_id
 
 
-# --- Pipeline Orchestrator ---
-
-
 class ScanPipeline:
     """Orchestrates the full vulnerability scan workflow.
 
@@ -146,11 +97,11 @@ class ScanPipeline:
 
     def __init__(
         self,
-        derivation_source: DerivationSource,
-        vulnerability_scanner: VulnerabilityScanner,
-        dependency_mapper: DependencyMapper,
-        tree_merger: TreeMerger,
-        tree_normalizer: TreeNormalizer,
+        derivation_source: DerivationSourceInterface,
+        vulnerability_scanner: VulnerabilityScannerInterface,
+        dependency_mapper: DependencyMapperInterface,
+        tree_merger: TreeMergerInterface,
+        tree_normalizer: TreeNormalizerInterface,
         storage: StorageInterface,
     ):
         """Initialize with injected pipeline stages.
@@ -212,6 +163,13 @@ class ScanPipeline:
         # Step 2: Scan for vulnerabilities
         vulns = self.vulnerability_scanner.scan_vulnerabilities(system_derivation)
 
+        # Build vuln_map: drv_path -> vuln_record
+        vuln_map: dict[str, Any] = {}
+        for vuln in vulns:
+            drv = vuln.get("derivation", "")
+            if drv:
+                vuln_map[drv] = vuln
+
         # Step 3: Get dependency trees for each vulnerability
         dep_trees: list[dict[str, Any]] = []
         for vuln in vulns:
@@ -222,12 +180,8 @@ class ScanPipeline:
         # Step 4: Merge trees
         merged = self.tree_merger.merge_trees(dep_trees)
 
-        # Step 5: Normalize to flat records
-        vulns_by_drv = {v["derivation"]: v for v in vulns}
-        vulns_by_pname = {v["pname"]: v for v in vulns}
-        def lookup(pname, drv_path):
-            return vulns_by_drv.get(drv_path, vulns_by_pname.get(pname))
-        records = self.tree_normalizer.normalize(merged, lookup)
+        # Step 5: Normalize to flat records using the vuln_map from step 2
+        records = self.tree_normalizer.normalize(merged, vuln_map)
 
         # Step 6: Persist to storage
         scan_id = self.storage.insert_scan(target)

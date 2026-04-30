@@ -8,9 +8,9 @@ from pathlib import Path
 
 from bottle import Bottle, request, run, response
 
-import database
-from database_storage import DatabaseStorage
-from scanner import ScanPipeline
+import core.database
+from core.database_storage import DatabaseStorage
+from core.scanner import ScanPipeline
 
 app = Bottle()
 

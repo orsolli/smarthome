@@ -1,9 +1,9 @@
 """Interface definitions for the vulnerability scan pipeline.
 
-Each pipeline stage is defined as an Abstract Base Class (ABC).
-Implementations are injected at runtime (dependency injection),
-allowing mock implementations for development and real implementations
-for production.
+Each pipeline stage is defined as an Abstract Base Class (ABC) with an
+Interface suffix. Implementations are injected at runtime (dependency
+injection), allowing mock implementations for development and real
+implementations for production.
 
 This mirrors the interface pattern used by the tree_parser library.
 """
@@ -12,28 +12,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 
-class DerivationSource(ABC):
-    """Resolves a target path to its Nix derivation.
-
-    Usage:
-        source = DerivationSourceImpl()
-        derivations = source.show_derivation("/run/current-system")
-    """
-
-    @abstractmethod
-    def show_derivation(self, target: str) -> dict[str, dict[str, Any]]:
-        """Resolve target to its derivation dict.
-
-        Args:
-            target: The derivation path to resolve (e.g. /run/current-system).
-
-        Returns:
-            A dict mapping derivation paths to their metadata.
-        """
-        ...
-
-
-class VulnerabilityScanner(ABC):
+class VulnerabilityScannerInterface(ABC):
     """Scans a derivation for known vulnerabilities.
 
     Usage:
@@ -55,7 +34,7 @@ class VulnerabilityScanner(ABC):
         ...
 
 
-class DependencyMapper(ABC):
+class DependencyMapperInterface(ABC):
     """Maps why a vulnerable package depends on the system.
 
     Usage:
@@ -79,7 +58,7 @@ class DependencyMapper(ABC):
         ...
 
 
-class TreeMerger(ABC):
+class TreeMergerInterface(ABC):
     """Merges multiple dependency trees into a single consolidated tree.
 
     Usage:
@@ -100,14 +79,14 @@ class TreeMerger(ABC):
         ...
 
 
-class TreeNormalizer(ABC):
+class TreeNormalizerInterface(ABC):
     """Converts a merged dependency tree into flat vulnerability records.
 
     Receives vulnerability info via constructor injection so it does not
     depend on any specific mock or production scanner.
 
     Usage:
-        normalizer = TreeNormalizerImpl(vuln_lookup)
+        normalizer = TreeNormalizerImpl(vuln_map)
         records = normalizer.normalize(merged_tree)
     """
 
@@ -115,13 +94,13 @@ class TreeNormalizer(ABC):
     def normalize(
         self,
         tree: dict[str, Any],
-        vuln_lookup: dict[str, Any],
+        vuln_map: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Convert a dependency tree into flat vulnerability records.
 
         Args:
             tree: A merged dependency tree dict.
-            vuln_lookup: Dict mapping (pname, drv_path) to vulnerability info.
+            vuln_map: Dict mapping drv_path to vulnerability info.
 
         Returns:
             List of dicts with keys: package_name, drv_path, severity.
@@ -168,7 +147,13 @@ class StorageInterface(ABC):
 
     @abstractmethod
     def insert_dependency_node(
-        self, scan_id: int, package_name: str, drv_path: str, parent_id: int | None = None, child_id: int | None = None, vulnerability_event_id: int | None = None
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
     ) -> int:
         """Insert a node into the dependency tree.
 

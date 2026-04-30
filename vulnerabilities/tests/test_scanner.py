@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from scanner import (
+from core.scanner import (
     MockDerivationSource,
     MockVulnerabilityScanner,
     MockDependencyMapper,
@@ -14,11 +14,11 @@ from scanner import (
     MockStorage,
 )
 from interfaces import (
-    DerivationSource,
-    VulnerabilityScanner,
-    DependencyMapper,
-    TreeMerger,
-    TreeNormalizer,
+    DerivationSourceInterface,
+    VulnerabilityScannerInterface,
+    DependencyMapperInterface,
+    TreeMergerInterface,
+    TreeNormalizerInterface,
     StorageInterface,
 )
 
@@ -68,12 +68,12 @@ class TestTreeMergerImpl(unittest.TestCase):
         """Merging empty list returns empty dict."""
         merger = TreeMergerImpl()
         result = merger.merge_trees([])
-        self.assertEqual(result, {})
+        self.assertEqual(result, {'children': [], 'name': '.', 'type': 'directory'})
 
     def test_merge_single_tree(self):
         """Merging single tree returns a dict."""
         merger = TreeMergerImpl()
-        trees = [{"drv_path": "/nix/store/a.drv", "pname": "a", "children": []}]
+        trees = [{"drv_path": "/nix/store/a.drv", "name": "a-1", "pname": "a", "children": []}]
         result = merger.merge_trees(trees)
         self.assertIsInstance(result, dict)
 
@@ -81,36 +81,29 @@ class TestTreeMergerImpl(unittest.TestCase):
 class TestTreeNormalizerImpl(unittest.TestCase):
     """Test TreeNormalizerImpl implementation."""
 
-    def _make_vuln_lookup(self, vulns):
-        """Create a vuln_lookup callable from a list of vulnix records."""
-        def lookup(pname, drv_path):
-            for v in vulns:
-                if v.get("pname") == pname or v.get("derivation") == drv_path:
-                    return v
-            return {}
-        return lookup
+    def _make_vuln_map(self, vulns):
+        return {v['derivation']: v for v in vulns}
 
     def test_normalize_with_mock_lookup(self):
         """Normalizing with default mock lookup finds vulnerabilities."""
-        from mock_vulnix import scan_vulnerabilities
-        vulns = scan_vulnerabilities("")
+        from mock.mock_vulnix import MockVulnerabilityScanner
+        vulns = MockVulnerabilityScanner().scan_vulnerabilities("")
         normalizer = TreeNormalizerImpl()
         tree = {
             "pname": "Diff",
             "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
             "children": [],
         }
-        result = normalizer.normalize(tree, vuln_lookup=self._make_vuln_lookup(vulns))
+        result = normalizer.normalize(tree, vuln_map=self._make_vuln_map(vulns))
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["package_name"], "Diff")
         self.assertEqual(result[0]["severity"], "CRITICAL")
 
     def test_normalize_with_custom_lookup(self):
         """Normalizing with custom lookup uses provided function."""
-        def custom_lookup(pname, drv_path):
-            if pname == "CustomPkg":
-                return {"cvssv3_basescore": {"CVE-2025-0001": 7.5}}
-            return {}
+        custom_lookup = {
+            "/nix/store/custom.drv":{"cvssv3_basescore": {"CVE-2025-0001": 7.5}}
+        }
 
         normalizer = TreeNormalizerImpl()
         tree = {
@@ -118,14 +111,14 @@ class TestTreeNormalizerImpl(unittest.TestCase):
             "drv_path": "/nix/store/custom.drv",
             "children": [],
         }
-        result = normalizer.normalize(tree, vuln_lookup=custom_lookup)
+        result = normalizer.normalize(tree, vuln_map=custom_lookup)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["severity"], "HIGH")
 
     def test_normalize_empty_tree(self):
         """Normalizing empty tree returns no records."""
         normalizer = TreeNormalizerImpl()
-        result = normalizer.normalize({}, vuln_lookup=lambda p, d: {})
+        result = normalizer.normalize({}, vuln_map={})
         self.assertEqual(result, [])
 
 
@@ -197,24 +190,24 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
 
     def test_run_scan_with_custom_stages(self):
         """run_scan works with custom stage implementations."""
-        class CustomDerivationSource(DerivationSource):
+        class CustomDerivationSource(DerivationSourceInterface):
             def show_derivation(self, target):
                 return {"/nix/store/custom.drv": {}}
 
-        class CustomVulnerabilityScanner(VulnerabilityScanner):
+        class CustomVulnerabilityScanner(VulnerabilityScannerInterface):
             def scan_vulnerabilities(self, target):
                 return [{"pname": "CustomVuln", "derivation": "/nix/store/vuln.drv", "cvssv3_basescore": {"CVE-2025-0002": 5.0}}]
 
-        class CustomDependencyMapper(DependencyMapper):
+        class CustomDependencyMapper(DependencyMapperInterface):
             def why_depends(self, system, target):
                 return [{"drv_path": system, "pname": "root", "children": [{"drv_path": target, "pname": "vuln", "children": []}]}]
 
-        class CustomTreeMerger(TreeMerger):
+        class CustomTreeMerger(TreeMergerInterface):
             def merge_trees(self, trees):
                 return {"drv_path": "/nix/store/merged.drv", "pname": "merged", "children": []}
 
-        class CustomTreeNormalizer(TreeNormalizer):
-            def normalize(self, tree, vuln_lookup=None):
+        class CustomTreeNormalizer(TreeNormalizerInterface):
+            def normalize(self, tree, vuln_map=None):
                 return [{"package_name": "merged", "drv_path": "/nix/store/merged.drv", "severity": "LOW"}]
 
         class CustomStorage(StorageInterface):

@@ -8,7 +8,7 @@ from io import BytesIO
 from unittest.mock import patch
 
 import app
-import database
+import core.database
 
 
 class TestRunScan(unittest.TestCase):

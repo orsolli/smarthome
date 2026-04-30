@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from merger import merge_dependency_trees, _dict_to_text, _trees_to_text
+from core.merger import merge_dependency_trees, _dict_to_text, _trees_to_text
 
 
 class TestDictToText(unittest.TestCase):

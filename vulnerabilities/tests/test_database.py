@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from database import (
+from core.database import (
     init_db,
     insert_scan,
     insert_vulnerability_event,

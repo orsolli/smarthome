@@ -1,9 +1,11 @@
 """Mock module simulating `vulnix` scanner output.
 
-Returns a list of vulnerability records for development use.
+Implements VulnerabilityScannerInterface for development use.
 """
 
 from typing import Any
+
+from interfaces import VulnerabilityScannerInterface
 
 
 # Simulated vulnix scan output
@@ -39,13 +41,16 @@ DEMO_VULNERABILITIES: list[dict[str, Any]] = [
 ]
 
 
-def scan_vulnerabilities(target: str) -> list[dict[str, Any]]:
-    """Mock `vulnix <target>` scanner.
+class MockVulnerabilityScanner(VulnerabilityScannerInterface):
+    """Mock implementation of VulnerabilityScannerInterface."""
 
-    Args:
-        target: A derivation path to scan.
+    def scan_vulnerabilities(self, target: str) -> list[dict[str, Any]]:
+        """Return the demo vulnerabilities.
 
-    Returns:
-        A list of vulnerability records.
-    """
-    return DEMO_VULNERABILITIES
+        Args:
+            target: The derivation path to scan (ignored; returns demo data).
+
+        Returns:
+            A list of vulnerability records.
+        """
+        return DEMO_VULNERABILITIES
