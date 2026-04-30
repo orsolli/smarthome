@@ -127,3 +127,60 @@ class TreeNormalizer(ABC):
             List of dicts with keys: package_name, drv_path, severity.
         """
         ...
+
+
+class StorageInterface(ABC):
+    """Handles persistence of scan results and dependency trees.
+
+    Usage:
+        storage = DatabaseStorageImpl(db_path)
+        scan_id = storage.insert_scan(target)
+    """
+
+    @abstractmethod
+    def insert_scan(self, target: str) -> int:
+        """Insert a scan record and return its ID.
+
+        Args:
+            target: The derivation path scanned.
+
+        Returns:
+            The ID of the inserted scan.
+        """
+        ...
+
+    @abstractmethod
+    def insert_vulnerability_event(
+        self, scan_id: int, package_name: str, drv_path: str, severity: str
+    ) -> int:
+        """Insert a vulnerability event and return its ID.
+
+        Args:
+            scan_id: The ID of the scan.
+            package_name: The name of the vulnerable package.
+            drv_path: The Nix derivation path.
+            severity: The severity level (e.g. 'HIGH').
+
+        Returns:
+            The ID of the inserted event.
+        """
+        ...
+
+    @abstractmethod
+    def insert_dependency_node(
+        self, scan_id: int, package_name: str, drv_path: str, parent_id: int | None = None, child_id: int | None = None, vulnerability_event_id: int | None = None
+    ) -> int:
+        """Insert a node into the dependency tree.
+
+        Args:
+            scan_id: The ID of the scan.
+            package_name: The name of the package.
+            drv_path: The Nix derivation path.
+            parent_id: The ID of the parent node.
+            child_id: The ID of the child node.
+            vulnerability_event_id: The ID of the linked vulnerability event.
+
+        Returns:
+            The ID of the inserted node.
+        """
+        ...

@@ -1,20 +1,16 @@
 """Entry point for the vulnerability scanning service.
 
-Ties together mock scanners, merger, normalizer, and database
+Ties together the ScanPipeline orchestrator and database queries
 to run scans and serve results via a Bottle web server.
 """
 
-import sqlite3
 from pathlib import Path
 
-from bottle import Bottle, request, run, response
+from bottle import Bottle, request, run, response, response
 
 import database
-from merger import merge_dependency_trees
-from mock_derivation import show_derivation
-from mock_vulnix import scan_vulnerabilities
-from mock_why_depends import why_depends
-from normalizer import normalize_tree
+from database_storage import DatabaseStorage
+from scanner import ScanPipeline
 
 app = Bottle()
 
@@ -23,26 +19,22 @@ DB_DIR = Path(__file__).parent / "data"
 DB_DIR.mkdir(exist_ok=True)
 DB_PATH = str(DB_DIR / "vulnerabilities.db")
 
-
-def get_connection() -> sqlite3.Connection:
-    """Get a database connection, initializing if needed.
-
-    Returns:
-        A sqlite3.Connection instance.
-    """
-    return database.init_db(DB_PATH)
+# Initialize the scan pipeline with production storage
+_storage = DatabaseStorage(DB_PATH)
+pipeline = ScanPipeline.default()
+pipeline.storage = _storage  # Replace mock storage with real storage
 
 
 def run_scan(target: str) -> dict:
     """Run a full vulnerability scan on the given target.
 
-    Steps:
-        1. Get derivation info via mock_derivation
-        2. Get vulnerabilities via mock_vulnix
-        3. Get dependency trees via mock_why_depends
-        4. Merge trees via merger
-        5. Normalize to flat records via normalizer
-        6. Store in database
+    Delegates to ScanPipeline which orchestrates:
+        1. DerivationSource: resolve target to derivation
+        2. VulnerabilityScanner: scan for vulnerabilities
+        3. DependencyMapper: get dependency trees for each vuln
+        4. TreeMerger: merge all trees into one
+        5. TreeNormalizer: convert to flat vulnerability records
+        6. Storage: persist results
 
     Args:
         target: The derivation path to scan.
@@ -50,86 +42,7 @@ def run_scan(target: str) -> dict:
     Returns:
         Dict with scan results summary.
     """
-    conn = get_connection()
-
-    # Step 1: Get derivation
-    derivations = show_derivation(target)
-    system_derivation = next(iter(derivations), None)
-    if not system_derivation:
-        return {"error": "No derivation found for target", "target": target}
-
-    # Step 2: Get vulnerabilities
-    vulns = scan_vulnerabilities(system_derivation)
-
-    # Step 3: Get dependency trees for each vulnerability
-    dep_trees: list[dict] = []
-    for vuln in vulns:
-        drv = vuln.get("derivation", "")
-        tree = why_depends(system_derivation, drv)
-        dep_trees.extend(tree)
-
-    # Step 4: Merge trees
-    merged = merge_dependency_trees(dep_trees)
-
-    # Step 5: Normalize to flat records
-    records = normalize_tree(merged)
-
-    # Step 6: Store in database
-    scan_id = database.insert_scan(conn, target)
-
-    event_ids: list[int] = []
-    for record in records:
-        event_id = database.insert_vulnerability_event(
-            conn,
-            scan_id,
-            record["package_name"],
-            record["drv_path"],
-            record["severity"],
-        )
-        event_ids.append(event_id)
-
-        # Store dependency tree nodes
-        _store_tree_nodes(conn, scan_id, merged, event_id)
-
-    conn.close()
-
-    return {
-        "scan_id": scan_id,
-        "target": target,
-        "vulnerabilities_found": len(records),
-        "vulnerabilities": records,
-    }
-
-
-def _store_tree_nodes(
-    conn: sqlite3.Connection,
-    scan_id: int,
-    tree: dict,
-    vuln_event_id: int,
-) -> None:
-    """Recursively store dependency tree nodes in the database.
-
-    Args:
-        conn: Database connection.
-        scan_id: The scan ID.
-        tree: The dependency tree dict.
-        vuln_event_id: Linked vulnerability event ID.
-    """
-    pname = tree.get("pname", "")
-    drv_path = tree.get("drv_path", "")
-    if not pname and not drv_path:
-        return
-
-    node_id = database.insert_dependency_node(
-        conn,
-        scan_id,
-        pname or drv_path,
-        drv_path,
-        vulnerability_event_id=vuln_event_id,
-    )
-
-    for child in tree.get("children", []):
-        _store_tree_nodes(conn, scan_id, child, vuln_event_id)
+    return pipeline.run_scan(target)
 
 
 @app.get("/scan")
@@ -165,7 +78,7 @@ def vulnerabilities_endpoint():
     until = request.params.get("until")
     package = request.params.get("package")
 
-    conn = get_connection()
+    conn = database.init_db(DB_PATH)
     vulns = database.get_vulnerabilities_since(conn, since, until)
     conn.close()
 
@@ -185,7 +98,7 @@ def tree_endpoint(scan_id: int):
     Returns:
         JSON list of dependency tree nodes.
     """
-    conn = get_connection()
+    conn = database.init_db(DB_PATH)
     tree = database.get_dependency_tree_for_scan(conn, scan_id)
     conn.close()
     return tree
@@ -204,7 +117,7 @@ def health_endpoint():
 def main():
     """Run the Bottle server."""
     # Initialize database on startup
-    get_connection().close()
+    database.init_db(DB_PATH).close()
     run(app, host="localhost", port=8080, debug=True)
 
 

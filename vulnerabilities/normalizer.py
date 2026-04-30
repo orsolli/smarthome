@@ -13,6 +13,23 @@ from typing import Any, Callable
 from mock_vulnix import scan_vulnerabilities
 
 
+def _find_vuln_info(pname: str, drv_path: str) -> dict[str, Any]:
+    """Default vulnerability lookup using mock vulnix data.
+
+    Args:
+        pname: Package name to look up.
+        drv_path: Derivation path to match.
+
+    Returns:
+        Dict with severity info, or empty dict if not found.
+    """
+    vulns = scan_vulnerabilities("")
+    for vuln in vulns:
+        if vuln.get("pname") == pname or vuln.get("derivation") == drv_path:
+            return vuln
+    return {}
+
+
 def _severity_from_cvss(cvss_score: float) -> str:
     """Convert a CVSS score to a severity label.
 
@@ -31,23 +48,6 @@ def _severity_from_cvss(cvss_score: float) -> str:
     return "LOW"
 
 
-def _find_vuln_info(pname: str, drv_path: str) -> dict[str, Any]:
-    """Default vulnerability lookup using mock vulnix data.
-
-    Args:
-        pname: Package name to look up.
-        drv_path: Derivation path to match.
-
-    Returns:
-        Dict with severity info, or empty dict if not found.
-    """
-    vulns = scan_vulnerabilities("")
-    for vuln in vulns:
-        if vuln.get("pname") == pname or vuln.get("derivation") == drv_path:
-            return vuln
-    return {}
-
-
 def normalize_tree(
     tree: dict[str, Any],
     vuln_lookup: Callable[[str, str], dict[str, Any]] | None = None,
@@ -60,7 +60,7 @@ def normalize_tree(
     Args:
         tree: A dependency tree dict from tree_parser.merge_nix_trees.
         vuln_lookup: Optional callable(pname, drv_path) -> dict for
-            vulnerability lookup. Defaults to mock data if not provided.
+            vulnerability lookup. Must be provided; no default.
 
     Returns:
         List of dicts with keys: package_name, drv_path, severity.
@@ -83,6 +83,7 @@ def _traverse_tree(
         node: Current tree node.
         records: Accumulator list for found records.
         vuln_lookup: Optional callable for vulnerability lookup.
+        seen: Set of already-seen (pname, drv_path) tuples for dedup.
     """
     pname = node.get("pname", "")
     drv_path = node.get("drv_path", "")
@@ -96,7 +97,7 @@ def _traverse_tree(
     if seen is not None:
         seen.add((pname, drv_path))
 
-    lookup_fn = vuln_lookup or _find_vuln_info
+    lookup_fn = vuln_lookup or (lambda p, d: {})
     vuln_info = lookup_fn(pname, drv_path)
     if vuln_info:
         cvss_scores = vuln_info.get("cvssv3_basescore", {})
