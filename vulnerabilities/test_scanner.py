@@ -1,5 +1,7 @@
 """Tests for the scan pipeline orchestrator and concrete implementations."""
 
+import os
+import tempfile
 import unittest
 
 from scanner import (
@@ -9,6 +11,7 @@ from scanner import (
     TreeMergerImpl,
     TreeNormalizerImpl,
     ScanPipeline,
+    MockStorage,
 )
 from interfaces import (
     DerivationSource,
@@ -16,6 +19,7 @@ from interfaces import (
     DependencyMapper,
     TreeMerger,
     TreeNormalizer,
+    StorageInterface,
 )
 
 
@@ -77,9 +81,20 @@ class TestTreeMergerImpl(unittest.TestCase):
 class TestTreeNormalizerImpl(unittest.TestCase):
     """Test TreeNormalizerImpl implementation."""
 
+    def _make_vuln_lookup(self, vulns):
+        """Create a vuln_lookup callable from a list of vulnix records."""
+        def lookup(pname, drv_path):
+            for v in vulns:
+                if v.get("pname") == pname or v.get("derivation") == drv_path:
+                    return v
+            return {}
+        return lookup
+
     def test_normalize_with_mock_lookup(self):
         """Normalizing with default mock lookup finds vulnerabilities."""
-        normalizer = TreeNormalizerImpl()
+        from mock_vulnix import scan_vulnerabilities
+        vulns = scan_vulnerabilities("")
+        normalizer = TreeNormalizerImpl(vuln_lookup=self._make_vuln_lookup(vulns))
         tree = {
             "pname": "Diff",
             "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
@@ -110,8 +125,39 @@ class TestTreeNormalizerImpl(unittest.TestCase):
     def test_normalize_empty_tree(self):
         """Normalizing empty tree returns no records."""
         normalizer = TreeNormalizerImpl()
-        result = normalizer.normalize({})
+        result = normalizer.normalize({}, vuln_lookup=lambda p, d: {})
         self.assertEqual(result, [])
+
+
+class TestMockStorage(unittest.TestCase):
+    """Test MockStorage implementation."""
+
+    def test_insert_scan(self):
+        """insert_scan returns incrementing IDs."""
+        storage = MockStorage()
+        id1 = storage.insert_scan("target1")
+        id2 = storage.insert_scan("target2")
+        self.assertEqual(id1, 1)
+        self.assertEqual(id2, 2)
+
+    def test_insert_vulnerability_event(self):
+        """insert_vulnerability_event returns incrementing IDs."""
+        storage = MockStorage()
+        # MockStorage starts counter at 1; insert_scan uses ID 1
+        storage.insert_scan("target")  # consumes ID 1
+        eid1 = storage.insert_vulnerability_event(1, "pkg1", "/drv1", "HIGH")
+        eid2 = storage.insert_vulnerability_event(1, "pkg2", "/drv2", "LOW")
+        self.assertEqual(eid1, 2)
+        self.assertEqual(eid2, 3)
+
+    def test_insert_dependency_node(self):
+        """insert_dependency_node returns incrementing IDs."""
+        storage = MockStorage()
+        storage.insert_scan("target")  # consumes ID 1
+        eid1 = storage.insert_vulnerability_event(1, "pkg1", "/drv1", "HIGH")
+        eid2 = storage.insert_vulnerability_event(1, "pkg2", "/drv2", "LOW")
+        nid = storage.insert_dependency_node(1, "pkg", "/drv")
+        self.assertEqual(nid, 4)  # IDs 1-3 consumed by insert_scan and insert_vulnerability_event in MockStorage default
 
 
 class TestScanPipeline(unittest.TestCase):
@@ -125,6 +171,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertIsInstance(pipeline.dependency_mapper, MockDependencyMapper)
         self.assertIsInstance(pipeline.tree_merger, TreeMergerImpl)
         self.assertIsInstance(pipeline.tree_normalizer, TreeNormalizerImpl)
+        self.assertIsInstance(pipeline.storage, MockStorage)
 
     def test_run_scan_returns_results(self):
         """run_scan returns vulnerability results."""
@@ -140,9 +187,6 @@ class TestScanPipeline(unittest.TestCase):
     def test_run_scan_no_derivation_returns_error(self):
         """run_scan returns error when no derivation found."""
         pipeline = ScanPipeline.default()
-        # Override the derivation source to return empty
-        pipeline.derivation_source = MockDerivationSource()
-        original_show = pipeline.derivation_source.show_derivation
         pipeline.derivation_source.show_derivation = lambda target: {}
         result = pipeline.run_scan("/nonexistent")
         self.assertIn("error", result)
@@ -153,7 +197,6 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
 
     def test_run_scan_with_custom_stages(self):
         """run_scan works with custom stage implementations."""
-        # Create custom mock stages
         class CustomDerivationSource(DerivationSource):
             def show_derivation(self, target):
                 return {"/nix/store/custom.drv": {}}
@@ -174,12 +217,27 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
             def normalize(self, tree, vuln_lookup=None):
                 return [{"package_name": "merged", "drv_path": "/nix/store/merged.drv", "severity": "LOW"}]
 
+        class CustomStorage(StorageInterface):
+            def __init__(self):
+                self._next = 1
+            def _next_id(self):
+                current = self._next
+                self._next += 1
+                return current
+            def insert_scan(self, target):
+                return self._next_id()
+            def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity):
+                return self._next_id()
+            def insert_dependency_node(self, scan_id, package_name, drv_path, parent_id=None, child_id=None, vulnerability_event_id=None):
+                return self._next_id()
+
         pipeline = ScanPipeline(
             derivation_source=CustomDerivationSource(),
             vulnerability_scanner=CustomVulnerabilityScanner(),
             dependency_mapper=CustomDependencyMapper(),
             tree_merger=CustomTreeMerger(),
             tree_normalizer=CustomTreeNormalizer(),
+            storage=CustomStorage(),
         )
         result = pipeline.run_scan("/custom/target")
         self.assertEqual(result["vulnerabilities_found"], 1)
