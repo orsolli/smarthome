@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
-from ..interfaces.TreeParser import TreeParserInterface
-from ..utils.tree_utils import count_indent, get_node_name
+from interfaces.TreeParser import TreeParserInterface
+from utils.tree_utils import count_indent, get_node_name
 
 class TreeParserImpl(TreeParserInterface):
     def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:

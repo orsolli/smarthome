@@ -1,9 +1,9 @@
 from typing import List, Dict, Any
 import json
-from ..interfaces.TreeParser import TreeParserInterface
-from ..interfaces.TreeMerger import TreeMergerInterface
-from ..interfaces.TreeFormatter import TreeFormatterInterface
-from ..interfaces.TreeOrchestrator import TreeOrchestratorInterface
+from interfaces.TreeParser import TreeParserInterface
+from interfaces.TreeMerger import TreeMergerInterface
+from interfaces.TreeFormatter import TreeFormatterInterface
+from interfaces.TreeOrchestrator import TreeOrchestratorInterface
 
 class TreeOrchestrator(TreeOrchestratorInterface):
     def __init__(self, 
