@@ -2,10 +2,10 @@ import unittest
 import os
 from typing import Dict, Any
 
-@unittest.skipIf(not os.path.exists("tree_parser/core/parser.py"), "Parser implementation not yet present")
+@unittest.skipIf(not os.path.exists("core/parser.py"), "Parser implementation not yet present")
 class TestParser(unittest.TestCase):
     def test_parser_split_logic(self):
-        from tree_parser.core.parser import TreeParserImpl
+        from core.parser import TreeParserImpl
         parser = TreeParserImpl()
         input_text = "/nix/store/a\n└───/nix/store/b\n/nix/store/c"
         trees = parser.split_into_trees(input_text)
@@ -13,7 +13,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(trees[0][0], "/nix/store/a")
 
     def test_parse_tree_block(self):
-        from tree_parser.core.parser import TreeParserImpl
+        from core.parser import TreeParserImpl
         parser = TreeParserImpl()
         input_text = """/nix/store/root
 │   /nix/append/child-a
@@ -37,7 +37,7 @@ class TestParser(unittest.TestCase):
         self.assertIn('/nix/append/grandchild-a2', grandchild_names)
 
     def test_complex_tree(self):
-        from tree_parser.core.parser import TreeParserImpl
+        from core.parser import TreeParserImpl
         parser = TreeParserImpl()
         # A more complex tree structure
         input_text = """/nix/store/root
@@ -55,5 +55,5 @@ class TestParser(unittest.TestCase):
 
 if __name__ == "__main__":
     import sys
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()

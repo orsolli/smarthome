@@ -3,13 +3,13 @@ import os
 from typing import Dict, Any
 
 
+@unittest.skipIf(not os.path.exists("core/orchestrator.py"), "Orchestrator implementation not yet present")
 class TestOrchestrator(unittest.TestCase):
-    @unittest.skipIf(not os.path.exists("tree_parser/core/orchestrator.py"), "Orchestrator implementation not yet present")
     def test_orchestrator(self):
-        from tree_parser.core.parser import TreeParserImpl
-        from tree_parser.core.merger import TreeMergerImpl
-        from tree_parser.core.formatter import TreeFormatterImpl
-        from tree_parser.core.orchestrator import TreeOrchestrator
+        from core.parser import TreeParserImpl
+        from core.merger import TreeMergerImpl
+        from core.formatter import TreeFormatterImpl
+        from core.orchestrator import TreeOrchestrator
         parser = TreeParserImpl()
         merger = TreeMergerImpl()
         formatter = TreeFormatterImpl()
@@ -40,10 +40,10 @@ class TestOrchestrator(unittest.TestCase):
 
     def test_recursive_merge(self):
         """Test that nested children are correctly merged."""
-        from tree_parser.core.parser import TreeParserImpl
-        from tree_parser.core.merger import TreeMergerImpl
-        from tree_parser.core.formatter import TreeFormatterImpl
-        from tree_parser.core.orchestrator import TreeOrchestrator
+        from core.parser import TreeParserImpl
+        from core.merger import TreeMergerImpl
+        from core.formatter import TreeFormatterImpl
+        from core.orchestrator import TreeOrchestrator
         parser = TreeParserImpl()
         merger = TreeMergerImpl()
         formatter = TreeFormatterImpl()
@@ -76,5 +76,5 @@ class TestOrchestrator(unittest.TestCase):
 
 if __name__ == "__main__":
     import sys
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()

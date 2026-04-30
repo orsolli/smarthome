@@ -1,6 +1,6 @@
 import copy
 from typing import List, Dict, Any
-from ..interfaces.TreeMerger import TreeMergerInterface
+from interfaces.TreeMerger import TreeMergerInterface
 
 class TreeMergerImpl(TreeMergerInterface):
     def merge_trees(self, trees: List[Dict[str, Any]]) -> Dict[str, Any]:

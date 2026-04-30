@@ -2,18 +2,17 @@ import unittest
 import os
 from typing import Dict, Any
 
+@unittest.skipIf(not os.path.exists("core/formatter.py"), "Formatter implementation not yet present")
 class TestFormatter(unittest.TestCase):
-    @unittest.skipIf(not os.path.exists("tree_parser/core/formatter.py"), "Formatter implementation not yet present")
     def test_formatter_simple_tree(self):
-        from tree_parser.core.formatter import TreeFormatterImpl
+        from core.formatter import TreeFormatterImpl
         formatter = TreeFormatterImpl()
         tree = {'name': 'root', 'children': [{'name': 'child', 'children': []}]}
         output = formatter.generate_ascii_tree(tree)
         self.assertIn('└───child', output)
 
-    @unittest.skipIf(not os.path.exists("tree_parser/core/formatter.py"), "Formatter implementation not yet present")
     def test_formatter_deep_tree(self):
-        from tree_parser.core.formatter import TreeFormatterImpl
+        from core.formatter import TreeFormatterImpl
         formatter = TreeFormatterImpl()
         tree = {
           "name": "/root/path/a.txt",
@@ -82,5 +81,5 @@ class TestFormatter(unittest.TestCase):
 
 if __name__ == "__main__":
     import sys
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()

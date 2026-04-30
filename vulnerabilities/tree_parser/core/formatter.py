@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from ..interfaces.TreeFormatter import TreeFormatterInterface
+from interfaces.TreeFormatter import TreeFormatterInterface
 
 
 class TreeFormatterImpl(TreeFormatterInterface):
