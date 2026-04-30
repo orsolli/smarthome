@@ -6,7 +6,7 @@ from .interfaces import (
     TreeOrchestratorInterface
 )
 from .core.parser import TreeParserImpl
-from .core.merger import TreeMergerImpl
+from .core.tree_merger import TreeMergerImpl
 from .core.formatter import TreeFormatterImpl
 from .core.orchestrator import TreeOrchestrator
 import json

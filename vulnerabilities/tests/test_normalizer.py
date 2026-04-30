@@ -2,8 +2,8 @@
 
 import unittest
 
-from mock_vulnix import scan_vulnerabilities as _demo_vulns
-from normalizer import (
+from mock.mock_vulnix import scan_vulnerabilities as _demo_vulns
+from core.normalizer import (
     normalize_tree,
     _severity_from_cvss,
 )

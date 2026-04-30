@@ -8,36 +8,10 @@ The merger converts between the original dependency tree format
 (with name and str_name keys).
 """
 
+import copy
 from typing import Any
 
-from tree_parser import merge_nix_trees
-
-
-def merge_dependency_trees(
-    dependency_trees: list[dict[str, Any]],
-) -> dict[str, Any]:
-    """Merge multiple dependency trees into a single consolidated tree.
-
-    Args:
-        dependency_trees: List of dependency tree dicts from why-depends.
-
-    Returns:
-        A consolidated tree dict with overlapping paths merged,
-        in the original format (pname, drv_path, children keys).
-    """
-    if not dependency_trees:
-        return {}
-
-    # Serialize trees to text format for tree_parser
-    text_input = _trees_to_text(dependency_trees)
-
-    # Use tree_parser to merge
-    merged_raw = merge_nix_trees(text_input)
-
-    # Extract the actual tree and convert back to original format
-    tree_data = merged_raw.get("tree", merged_raw)
-    return _tree_to_dict(tree_data)
-
+from interfaces import TreeMergerInterface
 
 def _trees_to_text(trees: list[dict[str, Any]]) -> str:
     """Convert a list of dependency tree dicts to text format.
@@ -140,3 +114,43 @@ def _strip_tree_chars(s: str) -> str:
     # Remove common tree drawing characters: └──, ├──, └, ─, │, etc.
     import re
     return re.sub(r'^[\u2514\u251c\u2502\u2500]+', '', s)
+
+
+class TreeMergerImpl(TreeMergerInterface):
+    """Implementation of TreeMergerInterface using tree_parser."""
+
+    def merge_trees(self, trees: list[dict[str, Any]]) -> dict[str, Any]:
+        """Merge multiple dependency trees into one.
+
+        Args:
+            dependency_trees: List of tree dicts from DependencyMapper.
+
+        Returns:
+            A consolidated tree dict with overlapping paths merged.
+        """
+        if not trees:
+            return {'name': '.', 'type': 'directory', 'children': []}
+        
+        root = {'name': '.', 'type': 'directory', 'children': []}
+        
+        def add_node(parent_node: dict[str, Any], new_node: dict[str, Any]):
+            existing_child = None
+            for child in parent_node.get('children', []):
+                if child['name'] == new_node['name']:
+                    existing_child = child
+                    break
+            
+            if existing_child:
+                for child_in_new_node in new_node.get('children', []):
+                    add_node(existing_child, child_in_new_node)
+            else:
+                new_child_copy = copy.deepcopy(new_node)
+                if 'children' not in parent_node:
+                    parent_node['children'] = []
+                parent_node['children'].append(new_child_copy)
+
+        for tree in trees:
+            add_node(root, tree)
+            
+        root['children'].sort(key=lambda x: x['name'])
+        return root
