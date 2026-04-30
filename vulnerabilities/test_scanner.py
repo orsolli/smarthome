@@ -94,13 +94,13 @@ class TestTreeNormalizerImpl(unittest.TestCase):
         """Normalizing with default mock lookup finds vulnerabilities."""
         from mock_vulnix import scan_vulnerabilities
         vulns = scan_vulnerabilities("")
-        normalizer = TreeNormalizerImpl(vuln_lookup=self._make_vuln_lookup(vulns))
+        normalizer = TreeNormalizerImpl()
         tree = {
             "pname": "Diff",
             "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
             "children": [],
         }
-        result = normalizer.normalize(tree)
+        result = normalizer.normalize(tree, vuln_lookup=self._make_vuln_lookup(vulns))
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["package_name"], "Diff")
         self.assertEqual(result[0]["severity"], "CRITICAL")
@@ -112,13 +112,13 @@ class TestTreeNormalizerImpl(unittest.TestCase):
                 return {"cvssv3_basescore": {"CVE-2025-0001": 7.5}}
             return {}
 
-        normalizer = TreeNormalizerImpl(vuln_lookup=custom_lookup)
+        normalizer = TreeNormalizerImpl()
         tree = {
             "pname": "CustomPkg",
             "drv_path": "/nix/store/custom.drv",
             "children": [],
         }
-        result = normalizer.normalize(tree)
+        result = normalizer.normalize(tree, vuln_lookup=custom_lookup)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["severity"], "HIGH")
 
