@@ -21,7 +21,6 @@ from mock_derivation import show_derivation
 from mock_vulnix import scan_vulnerabilities as _mock_scan_vuln
 from mock_why_depends import why_depends
 from normalizer import normalize_tree as _normalize_tree
-from normalizer import _find_vuln_info as _mock_find_vuln
 
 
 # --- Concrete Implementations ---
@@ -64,21 +63,12 @@ class TreeNormalizerImpl(TreeNormalizer):
     depend on any specific mock or production scanner.
     """
 
-    def __init__(self, vuln_lookup=None):
-        """Initialize with an optional vulnerability lookup function.
-
-        Args:
-            vuln_lookup: Callable(pname, drv_path) -> dict. If None,
-                defaults to the mock lookup function.
-        """
-        self._vuln_lookup = vuln_lookup or _mock_find_vuln
-
     def normalize(
         self,
         tree: dict[str, Any],
-        vuln_lookup: dict[str, Any] | None = None,
+        vuln_lookup: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        return _normalize_tree(tree, vuln_lookup or self._vuln_lookup)
+        return _normalize_tree(tree, vuln_lookup)
 
 
 class MockStorage(StorageInterface):
@@ -233,7 +223,11 @@ class ScanPipeline:
         merged = self.tree_merger.merge_trees(dep_trees)
 
         # Step 5: Normalize to flat records
-        records = self.tree_normalizer.normalize(merged)
+        vulns_by_drv = {v["derivation"]: v for v in vulns}
+        vulns_by_pname = {v["pname"]: v for v in vulns}
+        def lookup(pname, drv_path):
+            return vulns_by_drv.get(drv_path, vulns_by_pname.get(pname))
+        records = self.tree_normalizer.normalize(merged, lookup)
 
         # Step 6: Persist to storage
         scan_id = self.storage.insert_scan(target)

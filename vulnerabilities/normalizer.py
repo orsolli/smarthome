@@ -10,25 +10,6 @@ dependency injection for testing and production use.
 
 from typing import Any, Callable
 
-from mock_vulnix import scan_vulnerabilities
-
-
-def _find_vuln_info(pname: str, drv_path: str) -> dict[str, Any]:
-    """Default vulnerability lookup using mock vulnix data.
-
-    Args:
-        pname: Package name to look up.
-        drv_path: Derivation path to match.
-
-    Returns:
-        Dict with severity info, or empty dict if not found.
-    """
-    vulns = scan_vulnerabilities("")
-    for vuln in vulns:
-        if vuln.get("pname") == pname or vuln.get("derivation") == drv_path:
-            return vuln
-    return {}
-
 
 def _severity_from_cvss(cvss_score: float) -> str:
     """Convert a CVSS score to a severity label.
