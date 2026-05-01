@@ -1,5 +1,6 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
 from interfaces.TreeParser import TreeParserInterface
+
 
 def _count_indent(line: str) -> int:
     """
@@ -47,6 +48,7 @@ def _get_node_name(line: str) -> str:
     
     return line[i:].strip()
 
+
 class TreeParserImpl(TreeParserInterface):
     def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:
         lines = [line_ for line_ in lines if line_.strip()]
@@ -57,7 +59,7 @@ class TreeParserImpl(TreeParserInterface):
         root_name = lines[0].strip()
         root = {'name': root_name, 'str_name': root_name, 'type': 'directory', 'children': []}
         
-        path_nodes = [root]
+        path_nodes: List[Dict[str, Any]] = [root]
         
         for line in lines[1:]:
             depth = _count_indent(line)
@@ -96,8 +98,8 @@ class TreeParserImpl(TreeParserInterface):
 
     def split_into_trees(self, input_text: str) -> List[List[str]]:
         lines = input_text.strip().split('\n')
-        trees = []
-        current_block = []
+        trees: List[List[str]] = []
+        current_block: List[str] = []  # type: ignore
         
         for line in lines:
             if not line.strip():

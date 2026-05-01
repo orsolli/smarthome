@@ -6,7 +6,6 @@ from .Derivation import DerivationSourceInterface
 from .interfaces import (
     DependencyMapperInterface,
     VulnerabilityScannerInterface,
-    TreeMergerInterface,
     TreeNormalizerInterface,
     StorageInterface
 )

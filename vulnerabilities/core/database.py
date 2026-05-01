@@ -74,7 +74,7 @@ def insert_scan(conn: sqlite3.Connection, target: str) -> int:
         (datetime.utcnow().isoformat(), target),
     )
     conn.commit()
-    return cursor.lastrowid
+    return cursor.lastrowid or 0
 
 
 def insert_vulnerability_event(
@@ -101,7 +101,7 @@ def insert_vulnerability_event(
         (scan_id, package_name, drv_path, severity, datetime.utcnow().isoformat()),
     )
     conn.commit()
-    return cursor.lastrowid
+    return cursor.lastrowid or 0
 
 
 def insert_dependency_node(
@@ -134,7 +134,7 @@ def insert_dependency_node(
         (scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id),
     )
     conn.commit()
-    return cursor.lastrowid
+    return cursor.lastrowid or 0
 
 
 def get_vulnerabilities_since(

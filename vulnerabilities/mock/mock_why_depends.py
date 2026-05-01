@@ -9,7 +9,7 @@ from interfaces import DependencyMapperInterface
 
 
 # Simulated dependency tree structures
-DEMO_DEPENDENCY_TREES: dict[tuple[str, str], list[dict[str, Any]]] = {
+DEMO_DEPENDENCY_TREES: dict[tuple[str, str], str] = {
     (
         "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv",
         "/nix/store/diffdrv0000000000000000000000000000-Diff-9.99.0.drv",
