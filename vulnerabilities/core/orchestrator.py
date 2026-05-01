@@ -33,6 +33,3 @@ class TreeOrchestrator(TreeOrchestratorInterface):
             'json': json_output,
             'ascii': ascii_output
         }
-
-    def merge_nix_trees(self, input_text: str) -> Dict[str, Any]:
-        return self.process_tree_output(input_text)

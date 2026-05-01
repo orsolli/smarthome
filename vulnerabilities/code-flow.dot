@@ -1,0 +1,539 @@
+digraph G {
+concentrate=true;
+splines="ortho";
+rankdir="LR";
+subgraph legend{
+    rank = min;
+    label = "legend";
+    Legend [shape=none, margin=0, label = <
+        <table cellspacing="0" cellpadding="0" border="1"><tr><td>Code2flow Legend</td></tr><tr><td>
+        <table cellspacing="0">
+        <tr><td>Regular function</td><td width="50px" bgcolor='#cccccc'></td></tr>
+        <tr><td>Trunk function (nothing calls this)</td><td bgcolor='#966F33'></td></tr>
+        <tr><td>Leaf function (this calls nothing else)</td><td bgcolor='#6db33f'></td></tr>
+        <tr><td>Function call</td><td><font color='black'>&#8594;</font></td></tr>
+        </table></td></tr></table>
+        >];
+}node___main___global_986 [label="0: (global)()" name="__main__::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node___main___get_tree_parser_orchestrator_1d0 [label="17: get_tree_parser_orchestrator()" name="__main__::get_tree_parser_orchestrator" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node___main___main_f54 [label="27: main()" name="__main__::main" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node___main___merge_nix_trees_c57 [label="23: merge_nix_trees()" name="__main__::merge_nix_trees" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_app_global_897 [label="0: (global)()" name="app::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_app_main_9c5 [label="117: main()" name="app::main" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_app_run_scan_0f4 [label="28: run_scan()" name="app::run_scan" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_app_scan_endpoint_42a [label="49: scan_endpoint()" name="app::scan_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_app_tree_endpoint_060 [label="92: tree_endpoint()" name="app::tree_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_app_vulnerabilities_endpoint_aa6 [label="66: vulnerabilities_endpoint()" name="app::vulnerabilities_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_database_get_dependency_tree_for_scan_426 [label="179: get_dependency_tree_for_scan()" name="database::get_dependency_tree_for_scan" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_database_get_vulnerabilities_since_ea4 [label="140: get_vulnerabilities_since()" name="database::get_vulnerabilities_since" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_database_init_db_6e2 [label="47: init_db()" name="database::init_db" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_database_insert_dependency_node_4a2 [label="107: insert_dependency_node()" name="database::insert_dependency_node" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_database_insert_scan_500 [label="62: insert_scan()" name="database::insert_scan" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_database_insert_vulnerability_event_09d [label="80: insert_vulnerability_event()" name="database::insert_vulnerability_event" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_DatabaseStorage___init___8bc [label="21: __init__()" name="database_storage::DatabaseStorage.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeFormatterImpl__format_children_32b [label="63: _format_children()" name="formatter::TreeFormatterImpl._format_children" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeFormatterImpl__format_children_top_level_558 [label="40: _format_children_top_level()" name="formatter::TreeFormatterImpl._format_children_top_level" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeFormatterImpl_generate_ascii_tree_d79 [label="6: generate_ascii_tree()" name="formatter::TreeFormatterImpl.generate_ascii_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeMergerImpl_merge_trees_40c [label="122: merge_trees()" name="merger::TreeMergerImpl.merge_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_merger__dict_to_text_5ab [label="32: _dict_to_text()" name="merger::_dict_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_merger__parse_display_name_ff8 [label="79: _parse_display_name()" name="merger::_parse_display_name" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_merger__strip_tree_chars_2ad [label="105: _strip_tree_chars()" name="merger::_strip_tree_chars" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_merger__tree_to_dict_200 [label="52: _tree_to_dict()" name="merger::_tree_to_dict" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_merger__trees_to_text_bca [label="16: _trees_to_text()" name="merger::_trees_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_MockDerivationSource_show_derivation_529 [label="20: show_derivation()" name="mock_derivation::MockDerivationSource.show_derivation" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_MockVulnerabilityScanner_scan_vulnerabilities_10c [label="47: scan_vulnerabilities()" name="mock_vulnix::MockVulnerabilityScanner.scan_vulnerabilities" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_MockDependencyMapper_why_depends_ea8 [label="32: why_depends()" name="mock_why_depends::MockDependencyMapper.why_depends" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeNormalizerImpl_normalize_d22 [label="41: normalize()" name="normalizer::TreeNormalizerImpl.normalize" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_normalizer__severity_from_cvss_86f [label="16: _severity_from_cvss()" name="normalizer::_severity_from_cvss" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_normalizer__traverse_tree_537 [label="61: _traverse_tree()" name="normalizer::_traverse_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeOrchestrator___init___d80 [label="9: __init__()" name="orchestrator::TreeOrchestrator.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeParserImpl_parse_tree_block_b90 [label="6: parse_tree_block()" name="parser::TreeParserImpl.parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeParserImpl_split_into_trees_c6f [label="52: split_into_trees()" name="parser::TreeParserImpl.split_into_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_MockStorage___init___3fb [label="34: __init__()" name="scanner::MockStorage.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_MockStorage__next_id_31b [label="40: _next_id()" name="scanner::MockStorage._next_id" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_MockStorage_insert_dependency_node_000 [label="63: insert_dependency_node()" name="scanner::MockStorage.insert_dependency_node" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_MockStorage_insert_scan_69c [label="45: insert_scan()" name="scanner::MockStorage.insert_scan" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_MockStorage_insert_vulnerability_event_e4d [label="50: insert_vulnerability_event()" name="scanner::MockStorage.insert_vulnerability_event" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_ScanPipeline___init___136 [label="101: __init__()" name="scanner::ScanPipeline.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_ScanPipeline__store_tree_nodes_e80 [label="213: _store_tree_nodes()" name="scanner::ScanPipeline._store_tree_nodes" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_ScanPipeline_default_ef1 [label="128: default()" name="scanner::ScanPipeline.default" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_ScanPipeline_run_scan_d6e [label="147: run_scan()" name="scanner::ScanPipeline.run_scan" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TestFormatter_test_formatter_deep_tree_08b [label="14: test_formatter_deep_tree()" name="test_core_TestFormatter::TestFormatter.test_formatter_deep_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestFormatter_test_formatter_simple_tree_acd [label="7: test_formatter_simple_tree()" name="test_core_TestFormatter::TestFormatter.test_formatter_simple_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMerger_test_merger_empty_trees_b5b [label="33: test_merger_empty_trees()" name="test_core_TestMerger::TestMerger.test_merger_empty_trees" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMerger_test_merger_multiple_trees_overlap_48e [label="15: test_merger_multiple_trees_overlap()" name="test_core_TestMerger::TestMerger.test_merger_multiple_trees_overlap" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMerger_test_merger_single_tree_7d9 [label="7: test_merger_single_tree()" name="test_core_TestMerger::TestMerger.test_merger_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestOrchestrator_test_orchestrator_e63 [label="8: test_orchestrator()" name="test_core_TestOrchestrator::TestOrchestrator.test_orchestrator" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestOrchestrator_test_recursive_merge_718 [label="41: test_recursive_merge()" name="test_core_TestOrchestrator::TestOrchestrator.test_recursive_merge" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestParser_test_complex_tree_164 [label="42: test_complex_tree()" name="test_core_TestParser::TestParser.test_complex_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestParser_test_parse_tree_block_487 [label="18: test_parse_tree_block()" name="test_core_TestParser::TestParser.test_parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestParser_test_parser_split_logic_294 [label="10: test_parser_split_logic()" name="test_core_TestParser::TestParser.test_parser_split_logic" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_setUp_f4a [label="18: setUp()" name="test_database::TestDatabase.setUp" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_get_dependency_tree_for_scan_5e9 [label="86: test_get_dependency_tree_for_scan()" name="test_database::TestDatabase.test_get_dependency_tree_for_scan" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_get_vulnerabilities_since_filters_outside_range_784 [label="77: test_get_vulnerabilities_since_filters_outside_range()" name="test_database::TestDatabase.test_get_vulnerabilities_since_filters_outside_range" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_get_vulnerabilities_since_returns_events_d33 [label="57: test_get_vulnerabilities_since_returns_events()" name="test_database::TestDatabase.test_get_vulnerabilities_since_returns_events" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_get_vulnerabilities_since_with_until_171 [label="68: test_get_vulnerabilities_since_with_until()" name="test_database::TestDatabase.test_get_vulnerabilities_since_with_until" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_insert_dependency_node_returns_id_5d4 [label="49: test_insert_dependency_node_returns_id()" name="test_database::TestDatabase.test_insert_dependency_node_returns_id" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_insert_scan_returns_id_f78 [label="36: test_insert_scan_returns_id()" name="test_database::TestDatabase.test_insert_scan_returns_id" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd [label="41: test_insert_vulnerability_event_returns_id()" name="test_database::TestDatabase.test_insert_vulnerability_event_returns_id" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDictToText_test_node_with_children_926 [label="18: test_node_with_children()" name="test_merger::TestDictToText.test_node_with_children" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestDictToText_test_simple_node_157 [label="11: test_simple_node()" name="test_merger::TestDictToText.test_simple_node" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreesToText_test_empty_list_9b0 [label="35: test_empty_list()" name="test_merger::TestTreesToText.test_empty_list" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreesToText_test_multiple_trees_1ef [label="46: test_multiple_trees()" name="test_merger::TestTreesToText.test_multiple_trees" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreesToText_test_single_tree_9d9 [label="40: test_single_tree()" name="test_merger::TestTreesToText.test_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestNormalizeTree_setUp_89e [label="45: setUp()" name="test_normalizer::TestNormalizeTree.setUp" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestSeverityFromCvss_test_critical_score_9e1 [label="13: test_critical_score()" name="test_normalizer::TestSeverityFromCvss.test_critical_score" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestSeverityFromCvss_test_high_score_47d [label="19: test_high_score()" name="test_normalizer::TestSeverityFromCvss.test_high_score" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestSeverityFromCvss_test_low_score_43e [label="31: test_low_score()" name="test_normalizer::TestSeverityFromCvss.test_low_score" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestSeverityFromCvss_test_medium_score_8b4 [label="25: test_medium_score()" name="test_normalizer::TestSeverityFromCvss.test_medium_score" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_test_normalizer__make_vuln_lookup_9a5 [label="37: _make_vuln_lookup()" name="test_normalizer::_make_vuln_lookup" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TestMockDependencyMapper_test_why_depends_returns_trees_73d [label="56: test_why_depends_returns_trees()" name="test_scanner::TestMockDependencyMapper.test_why_depends_returns_trees" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMockDerivationSource_test_show_derivation_returns_dict_93f [label="31: test_show_derivation_returns_dict()" name="test_scanner::TestMockDerivationSource.test_show_derivation_returns_dict" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMockStorage_test_insert_dependency_node_74d [label="148: test_insert_dependency_node()" name="test_scanner::TestMockStorage.test_insert_dependency_node" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMockStorage_test_insert_scan_b7a [label="130: test_insert_scan()" name="test_scanner::TestMockStorage.test_insert_scan" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMockStorage_test_insert_vulnerability_event_874 [label="138: test_insert_vulnerability_event()" name="test_scanner::TestMockStorage.test_insert_vulnerability_event" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMockVulnerabilityScanner_test_scan_returns_vulnerabilities_b1f [label="42: test_scan_returns_vulnerabilities()" name="test_scanner::TestMockVulnerabilityScanner.test_scan_returns_vulnerabilities" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 [label="193: test_run_scan_with_custom_stages()" name="test_scanner::TestScanPipelineWithCustomStages.test_run_scan_with_custom_stages" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 [label="69: test_merge_empty_returns_empty()" name="test_scanner::TestTreeMergerImpl.test_merge_empty_returns_empty" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreeMergerImpl_test_merge_single_tree_047 [label="75: test_merge_single_tree()" name="test_scanner::TestTreeMergerImpl.test_merge_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreeNormalizerImpl__make_vuln_map_246 [label="86: _make_vuln_map()" name="test_scanner::TestTreeNormalizerImpl._make_vuln_map" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 [label="120: test_normalize_empty_tree()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_empty_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 [label="104: test_normalize_with_custom_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_custom_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 [label="89: test_normalize_with_mock_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_mock_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_tree_utils_count_indent_2c7 [label="1: count_indent()" name="tree_utils::count_indent" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_tree_utils_get_node_name_488 [label="27: get_node_name()" name="tree_utils::get_node_name" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node___main___global_986 -> node___main___main_f54 [color="#D55E00" penwidth="2"];
+node___main___get_tree_parser_orchestrator_1d0 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
+node___main___main_f54 -> node___main___merge_nix_trees_c57 [color="#F0E442" penwidth="2"];
+node___main___merge_nix_trees_c57 -> node___main___get_tree_parser_orchestrator_1d0 [color="#CC79A7" penwidth="2"];
+node_app_global_897 -> node_app_main_9c5 [color="#CC79A7" penwidth="2"];
+node_app_global_897 -> node_DatabaseStorage___init___8bc [color="#CC79A7" penwidth="2"];
+node_app_main_9c5 -> node_database_init_db_6e2 [color="#0072B2" penwidth="2"];
+node_app_run_scan_0f4 -> node_ScanPipeline_run_scan_d6e [color="#F0E442" penwidth="2"];
+node_app_scan_endpoint_42a -> node_app_run_scan_0f4 [color="#56B4E9" penwidth="2"];
+node_app_tree_endpoint_060 -> node_database_get_dependency_tree_for_scan_426 [color="#000000" penwidth="2"];
+node_app_tree_endpoint_060 -> node_database_init_db_6e2 [color="#000000" penwidth="2"];
+node_app_vulnerabilities_endpoint_aa6 -> node_database_get_vulnerabilities_since_ea4 [color="#D55E00" penwidth="2"];
+node_app_vulnerabilities_endpoint_aa6 -> node_database_init_db_6e2 [color="#D55E00" penwidth="2"];
+node_TreeFormatterImpl__format_children_32b -> node_TreeFormatterImpl__format_children_32b [color="#009E73" penwidth="2"];
+node_TreeFormatterImpl__format_children_top_level_558 -> node_TreeFormatterImpl__format_children_32b [color="#000000" penwidth="2"];
+node_TreeFormatterImpl_generate_ascii_tree_d79 -> node_TreeFormatterImpl__format_children_32b [color="#E69F00" penwidth="2"];
+node_TreeFormatterImpl_generate_ascii_tree_d79 -> node_TreeFormatterImpl__format_children_top_level_558 [color="#E69F00" penwidth="2"];
+node_merger__dict_to_text_5ab -> node_merger__dict_to_text_5ab [color="#009E73" penwidth="2"];
+node_merger__parse_display_name_ff8 -> node_merger__strip_tree_chars_2ad [color="#000000" penwidth="2"];
+node_merger__parse_display_name_ff8 -> node_merger__strip_tree_chars_2ad [color="#000000" penwidth="2"];
+node_merger__tree_to_dict_200 -> node_merger__parse_display_name_ff8 [color="#000000" penwidth="2"];
+node_merger__tree_to_dict_200 -> node_merger__tree_to_dict_200 [color="#000000" penwidth="2"];
+node_merger__trees_to_text_bca -> node_merger__dict_to_text_5ab [color="#56B4E9" penwidth="2"];
+node_TreeNormalizerImpl_normalize_d22 -> node_normalizer__traverse_tree_537 [color="#56B4E9" penwidth="2"];
+node_normalizer__traverse_tree_537 -> node_normalizer__severity_from_cvss_86f [color="#CC79A7" penwidth="2"];
+node_normalizer__traverse_tree_537 -> node_normalizer__traverse_tree_537 [color="#CC79A7" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_b90 -> node_tree_utils_count_indent_2c7 [color="#000000" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_b90 -> node_tree_utils_get_node_name_488 [color="#000000" penwidth="2"];
+node_MockStorage_insert_dependency_node_000 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
+node_MockStorage_insert_scan_69c -> node_MockStorage__next_id_31b [color="#F0E442" penwidth="2"];
+node_MockStorage_insert_vulnerability_event_e4d -> node_MockStorage__next_id_31b [color="#0072B2" penwidth="2"];
+node_ScanPipeline__store_tree_nodes_e80 -> node_ScanPipeline__store_tree_nodes_e80 [color="#000000" penwidth="2"];
+node_ScanPipeline_default_ef1 -> node_TreeOrchestrator___init___d80 [color="#E69F00" penwidth="2"];
+node_ScanPipeline_default_ef1 -> node_MockStorage___init___3fb [color="#E69F00" penwidth="2"];
+node_ScanPipeline_run_scan_d6e -> node_ScanPipeline__store_tree_nodes_e80 [color="#D55E00" penwidth="2"];
+node_TestFormatter_test_formatter_deep_tree_08b -> node_TreeFormatterImpl_generate_ascii_tree_d79 [color="#009E73" penwidth="2"];
+node_TestFormatter_test_formatter_simple_tree_acd -> node_TreeFormatterImpl_generate_ascii_tree_d79 [color="#0072B2" penwidth="2"];
+node_TestMerger_test_merger_empty_trees_b5b -> node_TreeMergerImpl_merge_trees_40c [color="#009E73" penwidth="2"];
+node_TestMerger_test_merger_multiple_trees_overlap_48e -> node_TreeMergerImpl_merge_trees_40c [color="#D55E00" penwidth="2"];
+node_TestMerger_test_merger_single_tree_7d9 -> node_TreeMergerImpl_merge_trees_40c [color="#E69F00" penwidth="2"];
+node_TestOrchestrator_test_orchestrator_e63 -> node_TreeOrchestrator___init___d80 [color="#009E73" penwidth="2"];
+node_TestOrchestrator_test_recursive_merge_718 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
+node_TestParser_test_complex_tree_164 -> node_TreeParserImpl_parse_tree_block_b90 [color="#F0E442" penwidth="2"];
+node_TestParser_test_parse_tree_block_487 -> node_TreeParserImpl_parse_tree_block_b90 [color="#CC79A7" penwidth="2"];
+node_TestParser_test_parser_split_logic_294 -> node_TreeParserImpl_split_into_trees_c6f [color="#F0E442" penwidth="2"];
+node_TestDatabase_setUp_f4a -> node_database_init_db_6e2 [color="#56B4E9" penwidth="2"];
+node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_get_dependency_tree_for_scan_426 [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_insert_dependency_node_4a2 [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_insert_scan_500 [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_filters_outside_range_784 -> node_database_get_vulnerabilities_since_ea4 [color="#F0E442" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_filters_outside_range_784 -> node_database_insert_scan_500 [color="#F0E442" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_filters_outside_range_784 -> node_database_insert_vulnerability_event_09d [color="#F0E442" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_returns_events_d33 -> node_database_get_vulnerabilities_since_ea4 [color="#009E73" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_returns_events_d33 -> node_database_insert_scan_500 [color="#009E73" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_returns_events_d33 -> node_database_insert_vulnerability_event_09d [color="#009E73" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_with_until_171 -> node_database_get_vulnerabilities_since_ea4 [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_with_until_171 -> node_database_insert_scan_500 [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_get_vulnerabilities_since_with_until_171 -> node_database_insert_vulnerability_event_09d [color="#E69F00" penwidth="2"];
+node_TestDatabase_test_insert_dependency_node_returns_id_5d4 -> node_database_insert_dependency_node_4a2 [color="#F0E442" penwidth="2"];
+node_TestDatabase_test_insert_dependency_node_returns_id_5d4 -> node_database_insert_scan_500 [color="#F0E442" penwidth="2"];
+node_TestDatabase_test_insert_scan_returns_id_f78 -> node_database_insert_scan_500 [color="#000000" penwidth="2"];
+node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd -> node_database_insert_scan_500 [color="#0072B2" penwidth="2"];
+node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd -> node_database_insert_vulnerability_event_09d [color="#0072B2" penwidth="2"];
+node_TestDictToText_test_node_with_children_926 -> node_merger__dict_to_text_5ab [color="#D55E00" penwidth="2"];
+node_TestDictToText_test_simple_node_157 -> node_merger__dict_to_text_5ab [color="#CC79A7" penwidth="2"];
+node_TestTreesToText_test_empty_list_9b0 -> node_merger__trees_to_text_bca [color="#000000" penwidth="2"];
+node_TestTreesToText_test_multiple_trees_1ef -> node_merger__trees_to_text_bca [color="#CC79A7" penwidth="2"];
+node_TestTreesToText_test_single_tree_9d9 -> node_merger__trees_to_text_bca [color="#E69F00" penwidth="2"];
+node_TestNormalizeTree_setUp_89e -> node_test_normalizer__make_vuln_lookup_9a5 [color="#D55E00" penwidth="2"];
+node_TestSeverityFromCvss_test_critical_score_9e1 -> node_normalizer__severity_from_cvss_86f [color="#E69F00" penwidth="2"];
+node_TestSeverityFromCvss_test_critical_score_9e1 -> node_normalizer__severity_from_cvss_86f [color="#E69F00" penwidth="2"];
+node_TestSeverityFromCvss_test_critical_score_9e1 -> node_normalizer__severity_from_cvss_86f [color="#E69F00" penwidth="2"];
+node_TestSeverityFromCvss_test_high_score_47d -> node_normalizer__severity_from_cvss_86f [color="#0072B2" penwidth="2"];
+node_TestSeverityFromCvss_test_high_score_47d -> node_normalizer__severity_from_cvss_86f [color="#0072B2" penwidth="2"];
+node_TestSeverityFromCvss_test_high_score_47d -> node_normalizer__severity_from_cvss_86f [color="#0072B2" penwidth="2"];
+node_TestSeverityFromCvss_test_low_score_43e -> node_normalizer__severity_from_cvss_86f [color="#D55E00" penwidth="2"];
+node_TestSeverityFromCvss_test_low_score_43e -> node_normalizer__severity_from_cvss_86f [color="#D55E00" penwidth="2"];
+node_TestSeverityFromCvss_test_medium_score_8b4 -> node_normalizer__severity_from_cvss_86f [color="#F0E442" penwidth="2"];
+node_TestSeverityFromCvss_test_medium_score_8b4 -> node_normalizer__severity_from_cvss_86f [color="#F0E442" penwidth="2"];
+node_TestSeverityFromCvss_test_medium_score_8b4 -> node_normalizer__severity_from_cvss_86f [color="#F0E442" penwidth="2"];
+node_TestMockDependencyMapper_test_why_depends_returns_trees_73d -> node_MockDependencyMapper_why_depends_ea8 [color="#0072B2" penwidth="2"];
+node_TestMockDerivationSource_test_show_derivation_returns_dict_93f -> node_MockDerivationSource_show_derivation_529 [color="#CC79A7" penwidth="2"];
+node_TestMockStorage_test_insert_dependency_node_74d -> node_MockStorage___init___3fb [color="#0072B2" penwidth="2"];
+node_TestMockStorage_test_insert_dependency_node_74d -> node_MockStorage_insert_dependency_node_000 [color="#0072B2" penwidth="2"];
+node_TestMockStorage_test_insert_dependency_node_74d -> node_MockStorage_insert_scan_69c [color="#0072B2" penwidth="2"];
+node_TestMockStorage_test_insert_dependency_node_74d -> node_MockStorage_insert_vulnerability_event_e4d [color="#0072B2" penwidth="2"];
+node_TestMockStorage_test_insert_dependency_node_74d -> node_MockStorage_insert_vulnerability_event_e4d [color="#0072B2" penwidth="2"];
+node_TestMockStorage_test_insert_scan_b7a -> node_MockStorage___init___3fb [color="#56B4E9" penwidth="2"];
+node_TestMockStorage_test_insert_scan_b7a -> node_MockStorage_insert_scan_69c [color="#56B4E9" penwidth="2"];
+node_TestMockStorage_test_insert_scan_b7a -> node_MockStorage_insert_scan_69c [color="#56B4E9" penwidth="2"];
+node_TestMockStorage_test_insert_vulnerability_event_874 -> node_MockStorage___init___3fb [color="#F0E442" penwidth="2"];
+node_TestMockStorage_test_insert_vulnerability_event_874 -> node_MockStorage_insert_scan_69c [color="#F0E442" penwidth="2"];
+node_TestMockStorage_test_insert_vulnerability_event_874 -> node_MockStorage_insert_vulnerability_event_e4d [color="#F0E442" penwidth="2"];
+node_TestMockStorage_test_insert_vulnerability_event_874 -> node_MockStorage_insert_vulnerability_event_e4d [color="#F0E442" penwidth="2"];
+node_TestMockVulnerabilityScanner_test_scan_returns_vulnerabilities_b1f -> node_MockVulnerabilityScanner_scan_vulnerabilities_10c [color="#CC79A7" penwidth="2"];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_ScanPipeline___init___136 [color="#000000" penwidth="2"];
+node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_ScanPipeline_run_scan_d6e [color="#000000" penwidth="2"];
+node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 -> node_TreeMergerImpl_merge_trees_40c [color="#E69F00" penwidth="2"];
+node_TestTreeMergerImpl_test_merge_single_tree_047 -> node_TreeMergerImpl_merge_trees_40c [color="#CC79A7" penwidth="2"];
+node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 -> node_TreeNormalizerImpl_normalize_d22 [color="#0072B2" penwidth="2"];
+node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 -> node_TreeNormalizerImpl_normalize_d22 [color="#CC79A7" penwidth="2"];
+node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 -> node_TreeNormalizerImpl_normalize_d22 [color="#000000" penwidth="2"];
+node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 -> node_TestTreeNormalizerImpl__make_vuln_map_246 [color="#000000" penwidth="2"];
+subgraph cluster____main___efb {
+    node___main___get_tree_parser_orchestrator_1d0 node___main___merge_nix_trees_c57 node___main___main_f54 node___main___global_986;
+    label="File: __main__";
+    name="__main__";
+    style="filled";
+    graph[style=dotted];
+};
+subgraph cluster__app_ecd {
+    node_app_run_scan_0f4 node_app_scan_endpoint_42a node_app_vulnerabilities_endpoint_aa6 node_app_tree_endpoint_060 node_app_main_9c5 node_app_global_897;
+    label="File: app";
+    name="app";
+    style="filled";
+    graph[style=dotted];
+};
+subgraph cluster__database_5ee {
+    node_database_init_db_6e2 node_database_insert_scan_500 node_database_insert_vulnerability_event_09d node_database_insert_dependency_node_4a2 node_database_get_vulnerabilities_since_ea4 node_database_get_dependency_tree_for_scan_426;
+    label="File: database";
+    name="database";
+    style="filled";
+    graph[style=dotted];
+};
+subgraph cluster__database_storage_f98 {
+    label="File: database_storage";
+    name="database_storage";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_database_storage_DatabaseStorage_09a {
+        node_DatabaseStorage___init___8bc;
+        label="Class: DatabaseStorage";
+        name="DatabaseStorage";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__formatter_580 {
+    label="File: formatter";
+    name="formatter";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_formatter_TreeFormatterImpl_dd9 {
+        node_TreeFormatterImpl_generate_ascii_tree_d79 node_TreeFormatterImpl__format_children_top_level_558 node_TreeFormatterImpl__format_children_32b;
+        label="Class: TreeFormatterImpl";
+        name="TreeFormatterImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__merger_f2b {
+    node_merger__trees_to_text_bca node_merger__dict_to_text_5ab node_merger__tree_to_dict_200 node_merger__parse_display_name_ff8 node_merger__strip_tree_chars_2ad;
+    label="File: merger";
+    name="merger";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_merger_TreeMergerImpl_a8e {
+        node_TreeMergerImpl_merge_trees_40c;
+        label="Class: TreeMergerImpl";
+        name="TreeMergerImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__mock_derivation_16b {
+    label="File: mock_derivation";
+    name="mock_derivation";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_mock_derivation_MockDerivationSource_f00 {
+        node_MockDerivationSource_show_derivation_529;
+        label="Class: MockDerivationSource";
+        name="MockDerivationSource";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__mock_vulnix_f0c {
+    label="File: mock_vulnix";
+    name="mock_vulnix";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_mock_vulnix_MockVulnerabilityScanner_376 {
+        node_MockVulnerabilityScanner_scan_vulnerabilities_10c;
+        label="Class: MockVulnerabilityScanner";
+        name="MockVulnerabilityScanner";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__mock_why_depends_600 {
+    label="File: mock_why_depends";
+    name="mock_why_depends";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_mock_why_depends_MockDependencyMapper_7af {
+        node_MockDependencyMapper_why_depends_ea8;
+        label="Class: MockDependencyMapper";
+        name="MockDependencyMapper";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__normalizer_5f2 {
+    node_normalizer__severity_from_cvss_86f node_normalizer__traverse_tree_537;
+    label="File: normalizer";
+    name="normalizer";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_normalizer_TreeNormalizerImpl_0aa {
+        node_TreeNormalizerImpl_normalize_d22;
+        label="Class: TreeNormalizerImpl";
+        name="TreeNormalizerImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__orchestrator_efc {
+    label="File: orchestrator";
+    name="orchestrator";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_orchestrator_TreeOrchestrator_bba {
+        node_TreeOrchestrator___init___d80;
+        label="Class: TreeOrchestrator";
+        name="TreeOrchestrator";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__parser_77e {
+    label="File: parser";
+    name="parser";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_parser_TreeParserImpl_48c {
+        node_TreeParserImpl_parse_tree_block_b90 node_TreeParserImpl_split_into_trees_c6f;
+        label="Class: TreeParserImpl";
+        name="TreeParserImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__scanner_811 {
+    label="File: scanner";
+    name="scanner";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_scanner_MockStorage_98e {
+        node_MockStorage___init___3fb node_MockStorage__next_id_31b node_MockStorage_insert_scan_69c node_MockStorage_insert_vulnerability_event_e4d node_MockStorage_insert_dependency_node_000;
+        label="Class: MockStorage";
+        name="MockStorage";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_scanner_ScanPipeline_1d4 {
+        node_ScanPipeline___init___136 node_ScanPipeline_default_ef1 node_ScanPipeline_run_scan_d6e node_ScanPipeline__store_tree_nodes_e80;
+        label="Class: ScanPipeline";
+        name="ScanPipeline";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_core_TestFormatter_eba {
+    label="File: test_core_TestFormatter";
+    name="test_core_TestFormatter";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_core_TestFormatter_TestFormatter_4bd {
+        node_TestFormatter_test_formatter_simple_tree_acd node_TestFormatter_test_formatter_deep_tree_08b;
+        label="Class: TestFormatter";
+        name="TestFormatter";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_core_TestMerger_9e6 {
+    label="File: test_core_TestMerger";
+    name="test_core_TestMerger";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_core_TestMerger_TestMerger_668 {
+        node_TestMerger_test_merger_single_tree_7d9 node_TestMerger_test_merger_multiple_trees_overlap_48e node_TestMerger_test_merger_empty_trees_b5b;
+        label="Class: TestMerger";
+        name="TestMerger";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_core_TestOrchestrator_8b1 {
+    label="File: test_core_TestOrchestrator";
+    name="test_core_TestOrchestrator";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_core_TestOrchestrator_TestOrchestrator_b21 {
+        node_TestOrchestrator_test_orchestrator_e63 node_TestOrchestrator_test_recursive_merge_718;
+        label="Class: TestOrchestrator";
+        name="TestOrchestrator";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_core_TestParser_104 {
+    label="File: test_core_TestParser";
+    name="test_core_TestParser";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_core_TestParser_TestParser_a8a {
+        node_TestParser_test_parser_split_logic_294 node_TestParser_test_parse_tree_block_487 node_TestParser_test_complex_tree_164;
+        label="Class: TestParser";
+        name="TestParser";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_database_636 {
+    label="File: test_database";
+    name="test_database";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_database_TestDatabase_9a5 {
+        node_TestDatabase_setUp_f4a node_TestDatabase_test_insert_scan_returns_id_f78 node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd node_TestDatabase_test_insert_dependency_node_returns_id_5d4 node_TestDatabase_test_get_vulnerabilities_since_returns_events_d33 node_TestDatabase_test_get_vulnerabilities_since_with_until_171 node_TestDatabase_test_get_vulnerabilities_since_filters_outside_range_784 node_TestDatabase_test_get_dependency_tree_for_scan_5e9;
+        label="Class: TestDatabase";
+        name="TestDatabase";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_merger_467 {
+    label="File: test_merger";
+    name="test_merger";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_merger_TestDictToText_208 {
+        node_TestDictToText_test_simple_node_157 node_TestDictToText_test_node_with_children_926;
+        label="Class: TestDictToText";
+        name="TestDictToText";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_merger_TestTreesToText_d58 {
+        node_TestTreesToText_test_empty_list_9b0 node_TestTreesToText_test_single_tree_9d9 node_TestTreesToText_test_multiple_trees_1ef;
+        label="Class: TestTreesToText";
+        name="TestTreesToText";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_normalizer_98d {
+    node_test_normalizer__make_vuln_lookup_9a5;
+    label="File: test_normalizer";
+    name="test_normalizer";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_normalizer_TestSeverityFromCvss_37c {
+        node_TestSeverityFromCvss_test_critical_score_9e1 node_TestSeverityFromCvss_test_high_score_47d node_TestSeverityFromCvss_test_medium_score_8b4 node_TestSeverityFromCvss_test_low_score_43e;
+        label="Class: TestSeverityFromCvss";
+        name="TestSeverityFromCvss";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_normalizer_TestNormalizeTree_d10 {
+        node_TestNormalizeTree_setUp_89e;
+        label="Class: TestNormalizeTree";
+        name="TestNormalizeTree";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__test_scanner_3b7 {
+    label="File: test_scanner";
+    name="test_scanner";
+    style="filled";
+    graph[style=dotted];
+    subgraph cluster_test_scanner_TestMockDerivationSource_5f5 {
+        node_TestMockDerivationSource_test_show_derivation_returns_dict_93f;
+        label="Class: TestMockDerivationSource";
+        name="TestMockDerivationSource";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestMockVulnerabilityScanner_6f2 {
+        node_TestMockVulnerabilityScanner_test_scan_returns_vulnerabilities_b1f;
+        label="Class: TestMockVulnerabilityScanner";
+        name="TestMockVulnerabilityScanner";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestMockDependencyMapper_f64 {
+        node_TestMockDependencyMapper_test_why_depends_returns_trees_73d;
+        label="Class: TestMockDependencyMapper";
+        name="TestMockDependencyMapper";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestTreeMergerImpl_0f9 {
+        node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 node_TestTreeMergerImpl_test_merge_single_tree_047;
+        label="Class: TestTreeMergerImpl";
+        name="TestTreeMergerImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestTreeNormalizerImpl_e8c {
+        node_TestTreeNormalizerImpl__make_vuln_map_246 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 node_TestTreeNormalizerImpl_test_normalize_empty_tree_115;
+        label="Class: TestTreeNormalizerImpl";
+        name="TestTreeNormalizerImpl";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestMockStorage_23a {
+        node_TestMockStorage_test_insert_scan_b7a node_TestMockStorage_test_insert_vulnerability_event_874 node_TestMockStorage_test_insert_dependency_node_74d;
+        label="Class: TestMockStorage";
+        name="TestMockStorage";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_scanner_TestScanPipelineWithCustomStages_8e8 {
+        node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0;
+        label="Class: TestScanPipelineWithCustomStages";
+        name="TestScanPipelineWithCustomStages";
+        style="filled";
+        graph[style=dotted];
+    };
+};
+subgraph cluster__tree_utils_529 {
+    node_tree_utils_count_indent_2c7 node_tree_utils_get_node_name_488;
+    label="File: tree_utils";
+    name="tree_utils";
+    style="filled";
+    graph[style=dotted];
+};
+}
