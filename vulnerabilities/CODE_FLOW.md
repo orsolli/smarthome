@@ -1,4 +1,4 @@
-# Vulnerability Scanner - Code Flow Diagram
+# Vulnerability Scanner - Refactored Code Flow
 
 ## High-Level Architecture
 
@@ -8,33 +8,46 @@ graph TB
         HTTP[HTTP Requests]
     end
 
-    subgraph AppLayer ["app.py - Entry Point & Server"]
+    subgraph HTTPLayer ["app/app.py - Thin HTTP Layer"]
         ScanEP[GET /scan Endpoint]
         VulnEP[GET /vulnerabilities Endpoint]
-        TreeEP[GET /tree/<id> Endpoint]
+        TreeEP[GET /tree/&lt;id&gt; Endpoint]
         HealthEP[GET /health Endpoint]
         RunScan[run_scan target]
-        GetConn[get_connection]
     end
 
-    subgraph MockLayer ["Mock Layer (Development)"]
-        MockDeriv[mock_derivation.py<br/>show_derivation]
-        MockVuln[mock_vulnix.py<br/>scan_vulnerabilities]
-        MockWhy[mock_why_depends.py<br/>why_depends]
+    subgraph PipelineLayer ["core/scanner.py - Scan Pipeline Orchestrator"]
+        ScanPipeline[ScanPipeline<br/>run_scan]
     end
 
-    subgraph ProcessingLayer ["Processing Layer"]
-        Merger[merger.py<br/>merge_dependency_trees]
-        Normalizer[normalizer.py<br/>normalize_tree]
-        TreeParser[tree_parser<br/>merge_nix_trees]
+    subgraph StageInterfaces ["interfaces/ - ABCs"]
+        DerivInt[DerivationSourceInterface]
+        VulnInt[VulnerabilityScannerInterface]
+        MapperInt[DependencyMapperInterface]
+        MergerInt[TreeMergerInterface]
+        NormInt[TreeNormalizerInterface]
+        StorInt[StorageInterface]
     end
 
-    subgraph StorageLayer ["database.py - Persistence"]
-        InsertScan[insert_scan]
-        InsertVuln[insert_vulnerability_event]
-        InsertNode[insert_dependency_node]
-        QueryVuln[get_vulnerabilities_since]
-        QueryTree[get_dependency_tree_for_scan]
+    subgraph StageImpls ["core/ - Pipeline Stages"]
+        DerivSrc[MockDerivationSource]
+        VulnScan[MockVulnerabilityScanner]
+        DepMap[MockDependencyMapper]
+        TreeMerger[TreeMergerImpl]
+        TreeNorm[TreeNormalizerImpl]
+        DBStorage[DatabaseStorage]
+    end
+
+    subgraph TreeParserLib ["tree_parser/ - External Library"]
+        Orchestrator[TreeOrchestrator]
+        Parser[TreeParserImpl]
+        MergerLib[TreeMergerImpl]
+        Formatter[TreeFormatterImpl]
+    end
+
+    subgraph StorageLayer ["core/database.py - Persistence"]
+        DBInsert[insert_scan + events + nodes]
+        DBQuery[get_vulnerabilities_since<br/>get_dependency_tree_for_scan]
         DB[(SQLite DB)]
     end
 
@@ -45,34 +58,40 @@ graph TB
     HTTP --> HealthEP
 
     ScanEP --> RunScan
-    RunScan --> MockDeriv
-    MockDeriv --> RunScan
-    RunScan --> MockVuln
-    MockVuln --> RunScan
-    RunScan --> MockWhy
-    MockWhy --> RunScan
-    RunScan --> Merger
-    Merger --> TreeParser
-    TreeParser --> Merger
-    Merger --> Normalizer
-    Normalizer --> RunScan
-    RunScan --> GetConn
-    GetConn --> InsertScan
-    InsertScan --> InsertVuln
-    InsertVuln --> InsertNode
-    InsertNode --> DB
-    InsertScan --> DB
+    VulnEP --> DBQuery
+    TreeEP --> DBQuery
+    HealthEP --> DBQuery
 
-    VulnEP --> GetConn
-    GetConn --> QueryVuln
-    QueryVuln --> VulnEP
+    RunScan --> ScanPipeline
+    ScanPipeline --> DerivSrc
+    ScanPipeline --> VulnScan
+    ScanPipeline --> DepMap
+    ScanPipeline --> TreeMerger
+    ScanPipeline --> TreeNorm
+    ScanPipeline --> DBStorage
 
-    TreeEP --> GetConn
-    GetConn --> QueryTree
-    QueryTree --> TreeEP
+    DerivSrc -.implements.-> DerivInt
+    VulnScan -.implements.-> VulnInt
+    DepMap -.implements.-> MapperInt
+    TreeMerger -.implements.-> MergerInt
+    TreeNorm -.implements.-> NormInt
+    DBStorage -.implements.-> StorInt
 
-    HealthEP --> GetConn
-    GetConn --> HealthEP
+    TreeMerger --> Orchestrator
+    Orchestrator --> Parser
+    Orchestrator --> MergerLib
+    Orchestrator --> Formatter
+
+    ScanPipeline --> DBInsert
+    DBInsert --> DB
+    DBQuery --> DB
+
+    style HTTPLayer fill:#fce4ec,stroke:#c62828,stroke-width:2px
+    style PipelineLayer fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    style StageInterfaces fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style StageImpls fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style TreeParserLib fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style StorageLayer fill:#e0f2f1,stroke:#00695c,stroke-width:2px
 ```
 
 ## Data Flow: Scan Pipeline
@@ -83,77 +102,90 @@ flowchart LR
         Target[/run/current-system/]
     end
 
-    subgraph Derivation ["Derivation Resolution"]
-        Show[show_derivation]
-        Deriv{"Derivation Dict<br/>/nix/store/...-system.drv"}
+    subgraph Pipeline ["core/scanner.py - ScanPipeline.run_scan()"]
+        DerivSrc["DerivationSource<br/>show_derivation()"]
+        VulnScan["VulnerabilityScanner<br/>scan_vulnerabilities()"]
+        DepMap["DependencyMapper<br/>why_depends()"]
+        TreeMerger["TreeMerger<br/>merge_nix_trees()"]
+        TreeNorm["TreeNormalizer<br/>normalize_tree()"]
     end
 
-    subgraph VulnerabilityScan ["Vulnerability Scan"]
-        Scan[scan_vulnerabilities]
-        Vulns["Vulnerability List<br/>Diff, ShellCheck"]
+    subgraph Impl ["Implementations"]
+        MockDeriv[mock/mock_derivation.py]
+        MockVuln[mock/mock_vulnix.py]
+        MockWhy[mock/mock_why_depends.py]
+        MergerImpl[core/merger.py]
+        NormalizerImpl[core/normalizer.py]
     end
 
-    subgraph DependencyMapping ["Dependency Mapping"]
-        Why[why_depends]
-        Trees["Dependency Trees<br/>Tree A, Tree B"]
+    subgraph TP ["tree_parser/ (external)"]
+        Orchestrator[orchestrator.py]
+        Parser[parser.py]
+        MergerLib[merger.py]
+        Formatter[formatter.py]
     end
 
-    subgraph Merge ["Tree Merger"]
-        MergeTrees[merge_dependency_trees]
-        TextConv[dict → text]
-        TP[tree_parser.merge_nix_trees]
-        Merged["Merged Tree<br/>Consolidated"]
-    end
-
-    subgraph Normalize ["Normalization"]
-        Traverse[traverse_tree]
-        Lookup[lookup CVSS scores]
-        Classify[classify severity]
-        Records["Flat Records<br/>pkg_name, drv_path, severity"]
-    end
-
-    subgraph Persist ["Persistence"]
+    subgraph Persist ["core/database.py"]
         DBInsert[insert_scan + events + nodes]
         DB[(SQLite)]
     end
 
-    Target --> Show
-    Show --> Deriv
-    Deriv --> Scan
-    Scan --> Vulns
-    Vulns --> Why
-    Why --> Trees
-    Trees --> MergeTrees
-    MergeTrees --> TextConv
-    TextConv --> TP
-    TP --> Merged
-    Merged --> Traverse
-    Traverse --> Lookup
-    Lookup --> Classify
-    Classify --> Records
-    Records --> DBInsert
+    Target --> DerivSrc
+    DerivSrc --> VulnScan
+    VulnScan --> DepMap
+    DepMap --> TreeMerger
+    TreeMerger --> TreeNorm
+    TreeNorm --> DBInsert
     DBInsert --> DB
+
+    DerivSrc --> MockDeriv
+    VulnScan --> MockVuln
+    DepMap --> MockWhy
+    TreeMerger --> MergerImpl
+    MergerImpl --> Orchestrator
+    Orchestrator --> Parser
+    Orchestrator --> MergerLib
+    Orchestrator --> Formatter
+    TreeNorm --> NormalizerImpl
+
+    style Pipeline fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    style Impl fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style TP fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Persist fill:#e0f2f1,stroke:#00695c,stroke-width:2px
 ```
 
 ## Module Dependencies
 
 ```mermaid
 graph LR
-    app[app.py] --> merger[merger.py]
-    app --> normalizer[normalizer.py]
-    app --> database[database.py]
-    app --> mock_deriv[mock_derivation.py]
-    app --> mock_vuln[mock_vulnix.py]
-    app --> mock_why[mock_why_depends.py]
+    app[app/app.py] --> scanner[core/scanner.py]
+    app --> db_query[core/database.py]
+    app --> db_storage[core/database_storage.py]
 
-    merger --> tree_parser[tree_parser<br/>merge_nix_trees]
+    scanner --> interfaces[interfaces/ABCs]
+    scanner --> mock_deriv[mock/mock_derivation.py]
+    scanner --> mock_vuln[mock/mock_vulnix.py]
+    scanner --> mock_why[mock/mock_why_depends.py]
+    scanner --> orchestrator[core/orchestrator.py]
+    scanner --> normalizer[core/normalizer.py]
 
-    normalizer --> mock_vuln
+    orchestrator --> tree_parser[tree_parser/]
 
-    database --> DB[(sqlite3)]
+    normalizer --> interfaces
 
-    test_app[test_app.py] --> app
-    test_merger[test_merger.py] --> merger
-    test_normalizer[test_normalizer.py] --> normalizer
-    test_database[test_database.py] --> database
+    db_storage --> interfaces
+    db_storage --> db_query
+
+    test_app[tests/test_app.py] --> app
+    test_scanner[tests/test_scanner.py] --> scanner
+    test_scanner --> interfaces
+    test_scanner --> mock_deriv
+    test_scanner --> mock_vuln
+    test_scanner --> mock_why
+    test_scanner --> normalizer
+
+    style app fill:#fce4ec,stroke:#c62828,stroke-width:2px
+    style scanner fill:#e1f5fe,stroke:#01579b,stroke-width:3px
+    style interfaces fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style tree_parser fill:#fff3e0,stroke:#e65100,stroke-width:2px
 ```
