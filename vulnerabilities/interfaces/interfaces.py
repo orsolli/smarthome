@@ -45,7 +45,7 @@ class DependencyMapperInterface(ABC):
     @abstractmethod
     def why_depends(
         self, system_derivation: str, target_derivation: str
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | str:
         """Get the dependency tree from system to the target derivation.
 
         Args:
@@ -53,7 +53,7 @@ class DependencyMapperInterface(ABC):
             target_derivation: The target derivation to trace dependencies for.
 
         Returns:
-            A list of dependency tree dicts.
+            A concatenated list of of dependency tree strings.
         """
         ...
 
@@ -95,7 +95,7 @@ class TreeNormalizerInterface(ABC):
         self,
         tree: dict[str, Any],
         vuln_map: dict[str, Any],
-    ) -> list[dict[str, Any]]:
+    ) -> list[dict[str, Any]] | str:
         """Convert a dependency tree into flat vulnerability records.
 
         Args:
