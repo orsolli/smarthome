@@ -22,7 +22,7 @@ def get_tree_parser_orchestrator() -> TreeOrchestratorInterface:
 
 def merge_nix_trees(input_text: str) -> Dict[str, Any]:
     orchestrator = get_tree_parser_orchestrator()
-    return orchestrator.merge_nix_trees(input_text)
+    return orchestrator.process_tree_output(input_text)
 
 def main():
     input_text = """/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv

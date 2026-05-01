@@ -35,7 +35,7 @@ class TestOrchestrator(unittest.TestCase):
     └───second/child
         └───/bastard
 """
-        result = orchestrator.merge_nix_trees(input_text)
+        result = orchestrator.process_tree_output(input_text)
         self.assertEqual(result["ascii"], output_text)
 
     def test_recursive_merge(self):
@@ -55,7 +55,7 @@ class TestOrchestrator(unittest.TestCase):
 └───/nix/store/child-a
     └───/nix/store/grandchild-a2
 """
-        result = orchestrator.merge_nix_trees(input_text)
+        result = orchestrator.process_tree_output(input_text)
         
         # Find child-a in the results
         child_a = None
