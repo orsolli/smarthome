@@ -206,7 +206,7 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
 
         class CustomTreeOrchestrator(TreeOrchestratorInterface):
             def process_tree_output(self, trees):
-                return {"drv_path": "/nix/store/merged.drv", "name": "merged", "children": []}
+                return {'tree': {"drv_path": "/nix/store/merged.drv", "name": "merged", "children": []}}
 
         class CustomTreeNormalizer(TreeNormalizerInterface):
             def normalize(self, tree, vuln_map=None):

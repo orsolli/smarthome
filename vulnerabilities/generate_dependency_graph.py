@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import tempfile
 import os
@@ -14,7 +15,13 @@ def read(input_file):
 def get_dot(code_path):
     #with tempfile.NamedTemporaryFile(delete=True, suffix=".dot") as temp_file:
     #    temp_file_path = temp_file.name
-    code2flow(code_path, dot_file, hide_legend=False, exclude_namespaces=["generate_dependency_graph"])
+    code2flow(
+        code_path,
+        dot_file,
+        hide_legend=False,
+        exclude_namespaces=["generate_dependency_graph"],
+        level=logging.WARN
+    )
     dot_content = read(dot_file)
 
     return dot_content
