@@ -47,8 +47,10 @@ node_TreeNormalizerImpl_normalize_d22 [label="41: normalize()" name="normalizer:
 node_normalizer__severity_from_cvss_86f [label="16: _severity_from_cvss()" name="normalizer::_severity_from_cvss" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_normalizer__traverse_tree_537 [label="61: _traverse_tree()" name="normalizer::_traverse_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_TreeOrchestrator___init___d80 [label="9: __init__()" name="orchestrator::TreeOrchestrator.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_TreeParserImpl_parse_tree_block_b90 [label="6: parse_tree_block()" name="parser::TreeParserImpl.parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_TreeParserImpl_split_into_trees_c6f [label="52: split_into_trees()" name="parser::TreeParserImpl.split_into_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeParserImpl_parse_tree_block_aba [label="51: parse_tree_block()" name="parser::TreeParserImpl.parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeParserImpl_split_into_trees_c6f [label="97: split_into_trees()" name="parser::TreeParserImpl.split_into_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_parser__count_indent_e41 [label="4: _count_indent()" name="parser::_count_indent" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_parser__get_node_name_99e [label="30: _get_node_name()" name="parser::_get_node_name" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockStorage___init___3fb [label="34: __init__()" name="scanner::MockStorage.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockStorage__next_id_31b [label="40: _next_id()" name="scanner::MockStorage._next_id" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockStorage_insert_dependency_node_000 [label="63: insert_dependency_node()" name="scanner::MockStorage.insert_dependency_node" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
@@ -100,8 +102,6 @@ node_TestTreeNormalizerImpl__make_vuln_map_246 [label="86: _make_vuln_map()" nam
 node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 [label="120: test_normalize_empty_tree()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_empty_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 [label="104: test_normalize_with_custom_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_custom_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 [label="89: test_normalize_with_mock_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_mock_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_tree_utils_count_indent_2c7 [label="1: count_indent()" name="tree_utils::count_indent" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_tree_utils_get_node_name_488 [label="27: get_node_name()" name="tree_utils::get_node_name" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node___main___global_986 -> node___main___main_f54 [color="#D55E00" penwidth="2"];
 node___main___get_tree_parser_orchestrator_1d0 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
 node___main___main_f54 -> node___main___merge_nix_trees_c57 [color="#F0E442" penwidth="2"];
@@ -128,8 +128,8 @@ node_merger__trees_to_text_bca -> node_merger__dict_to_text_5ab [color="#56B4E9"
 node_TreeNormalizerImpl_normalize_d22 -> node_normalizer__traverse_tree_537 [color="#56B4E9" penwidth="2"];
 node_normalizer__traverse_tree_537 -> node_normalizer__severity_from_cvss_86f [color="#CC79A7" penwidth="2"];
 node_normalizer__traverse_tree_537 -> node_normalizer__traverse_tree_537 [color="#CC79A7" penwidth="2"];
-node_TreeParserImpl_parse_tree_block_b90 -> node_tree_utils_count_indent_2c7 [color="#000000" penwidth="2"];
-node_TreeParserImpl_parse_tree_block_b90 -> node_tree_utils_get_node_name_488 [color="#000000" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_aba -> node_parser__count_indent_e41 [color="#56B4E9" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_aba -> node_parser__get_node_name_99e [color="#56B4E9" penwidth="2"];
 node_MockStorage_insert_dependency_node_000 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
 node_MockStorage_insert_scan_69c -> node_MockStorage__next_id_31b [color="#F0E442" penwidth="2"];
 node_MockStorage_insert_vulnerability_event_e4d -> node_MockStorage__next_id_31b [color="#0072B2" penwidth="2"];
@@ -144,8 +144,8 @@ node_TestMerger_test_merger_multiple_trees_overlap_48e -> node_TreeMergerImpl_me
 node_TestMerger_test_merger_single_tree_7d9 -> node_TreeMergerImpl_merge_trees_40c [color="#E69F00" penwidth="2"];
 node_TestOrchestrator_test_orchestrator_e63 -> node_TreeOrchestrator___init___d80 [color="#009E73" penwidth="2"];
 node_TestOrchestrator_test_recursive_merge_718 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
-node_TestParser_test_complex_tree_164 -> node_TreeParserImpl_parse_tree_block_b90 [color="#F0E442" penwidth="2"];
-node_TestParser_test_parse_tree_block_487 -> node_TreeParserImpl_parse_tree_block_b90 [color="#CC79A7" penwidth="2"];
+node_TestParser_test_complex_tree_164 -> node_TreeParserImpl_parse_tree_block_aba [color="#F0E442" penwidth="2"];
+node_TestParser_test_parse_tree_block_487 -> node_TreeParserImpl_parse_tree_block_aba [color="#CC79A7" penwidth="2"];
 node_TestParser_test_parser_split_logic_294 -> node_TreeParserImpl_split_into_trees_c6f [color="#F0E442" penwidth="2"];
 node_TestDatabase_setUp_f4a -> node_database_init_db_6e2 [color="#56B4E9" penwidth="2"];
 node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_get_dependency_tree_for_scan_426 [color="#E69F00" penwidth="2"];
@@ -336,12 +336,13 @@ subgraph cluster__orchestrator_efc {
     };
 };
 subgraph cluster__parser_77e {
+    node_parser__count_indent_e41 node_parser__get_node_name_99e;
     label="File: parser";
     name="parser";
     style="filled";
     graph[style=dotted];
     subgraph cluster_parser_TreeParserImpl_48c {
-        node_TreeParserImpl_parse_tree_block_b90 node_TreeParserImpl_split_into_trees_c6f;
+        node_TreeParserImpl_parse_tree_block_aba node_TreeParserImpl_split_into_trees_c6f;
         label="Class: TreeParserImpl";
         name="TreeParserImpl";
         style="filled";
@@ -528,12 +529,5 @@ subgraph cluster__test_scanner_3b7 {
         style="filled";
         graph[style=dotted];
     };
-};
-subgraph cluster__tree_utils_529 {
-    node_tree_utils_count_indent_2c7 node_tree_utils_get_node_name_488;
-    label="File: tree_utils";
-    name="tree_utils";
-    style="filled";
-    graph[style=dotted];
 };
 }

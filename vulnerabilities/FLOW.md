@@ -106,11 +106,13 @@ graph LR
         direction LR
         subgraph Class: TreeParserImpl
             direction LR
-            node_TreeParserImpl_parse_tree_block_b90["6: parse_tree_block()"]:::filled
-            node_TreeParserImpl_split_into_trees_c6f["52: split_into_trees()"]:::leaf
+            node_TreeParserImpl_parse_tree_block_aba["51: parse_tree_block()"]:::filled
+            node_TreeParserImpl_split_into_trees_c6f["97: split_into_trees()"]:::leaf
         end
-        node_TreeParserImpl_parse_tree_block_b90["6: parse_tree_block()"]:::filled
-        node_TreeParserImpl_split_into_trees_c6f["52: split_into_trees()"]:::leaf
+        node_TreeParserImpl_parse_tree_block_aba["51: parse_tree_block()"]:::filled
+        node_TreeParserImpl_split_into_trees_c6f["97: split_into_trees()"]:::leaf
+        node_parser__count_indent_e41["4: _count_indent()"]:::leaf
+        node_parser__get_node_name_99e["30: _get_node_name()"]:::leaf
     end
     subgraph File: scanner
         direction LR
@@ -294,11 +296,6 @@ graph LR
         node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847["104: test_normalize_with_custom_lookup()"]:::trunk
         node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8["89: test_normalize_with_mock_lookup()"]:::trunk
     end
-    subgraph File: tree_utils
-        direction LR
-        node_tree_utils_count_indent_2c7["1: count_indent()"]:::leaf
-        node_tree_utils_get_node_name_488["27: get_node_name()"]:::leaf
-    end
 
     %% Edges
     node___main___global_986 --> node___main___main_f54
@@ -327,8 +324,8 @@ graph LR
     node_TreeNormalizerImpl_normalize_d22 --> node_normalizer__traverse_tree_537
     node_normalizer__traverse_tree_537 --> node_normalizer__severity_from_cvss_86f
     node_normalizer__traverse_tree_537 --> node_normalizer__traverse_tree_537
-    node_TreeParserImpl_parse_tree_block_b90 --> node_tree_utils_count_indent_2c7
-    node_TreeParserImpl_parse_tree_block_b90 --> node_tree_utils_get_node_name_488
+    node_TreeParserImpl_parse_tree_block_aba --> node_parser__count_indent_e41
+    node_TreeParserImpl_parse_tree_block_aba --> node_parser__get_node_name_99e
     node_MockStorage_insert_dependency_node_000 --> node_MockStorage__next_id_31b
     node_MockStorage_insert_scan_69c --> node_MockStorage__next_id_31b
     node_MockStorage_insert_vulnerability_event_e4d --> node_MockStorage__next_id_31b
@@ -343,8 +340,8 @@ graph LR
     node_TestMerger_test_merger_single_tree_7d9 --> node_TreeMergerImpl_merge_trees_40c
     node_TestOrchestrator_test_orchestrator_e63 --> node_TreeOrchestrator___init___d80
     node_TestOrchestrator_test_recursive_merge_718 --> node_TreeOrchestrator___init___d80
-    node_TestParser_test_complex_tree_164 --> node_TreeParserImpl_parse_tree_block_b90
-    node_TestParser_test_parse_tree_block_487 --> node_TreeParserImpl_parse_tree_block_b90
+    node_TestParser_test_complex_tree_164 --> node_TreeParserImpl_parse_tree_block_aba
+    node_TestParser_test_parse_tree_block_487 --> node_TreeParserImpl_parse_tree_block_aba
     node_TestParser_test_parser_split_logic_294 --> node_TreeParserImpl_split_into_trees_c6f
     node_TestDatabase_setUp_f4a --> node_database_init_db_6e2
     node_TestDatabase_test_get_dependency_tree_for_scan_5e9 --> node_database_get_dependency_tree_for_scan_426
@@ -435,8 +432,8 @@ graph LR
     linkStyle 23 stroke:#56B4E9
     linkStyle 24 stroke:#CC79A7
     linkStyle 25 stroke:#CC79A7
-    linkStyle 26 stroke:#000000
-    linkStyle 27 stroke:#000000
+    linkStyle 26 stroke:#56B4E9
+    linkStyle 27 stroke:#56B4E9
     linkStyle 28 stroke:#000000
     linkStyle 29 stroke:#F0E442
     linkStyle 30 stroke:#0072B2
