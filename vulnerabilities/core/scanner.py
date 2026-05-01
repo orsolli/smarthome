@@ -14,11 +14,14 @@ from interfaces import (
     DependencyMapperInterface,
     DerivationSourceInterface,
     StorageInterface,
-    TreeMergerInterface,
+    TreeOrchestratorInterface,
     TreeNormalizerInterface,
     VulnerabilityScannerInterface,
 )
+from core.orchestrator import TreeOrchestrator
+from core.parser import TreeParserImpl
 from core.merger import TreeMergerImpl
+from core.formatter import TreeFormatterImpl
 from mock.mock_derivation import MockDerivationSource
 from mock.mock_vulnix import MockVulnerabilityScanner
 from mock.mock_why_depends import MockDependencyMapper
@@ -100,7 +103,7 @@ class ScanPipeline:
         derivation_source: DerivationSourceInterface,
         vulnerability_scanner: VulnerabilityScannerInterface,
         dependency_mapper: DependencyMapperInterface,
-        tree_merger: TreeMergerInterface,
+        orchestrator: TreeOrchestratorInterface,
         tree_normalizer: TreeNormalizerInterface,
         storage: StorageInterface,
     ):
@@ -110,14 +113,14 @@ class ScanPipeline:
             derivation_source: Resolves target to derivation.
             vulnerability_scanner: Scans derivation for vulns.
             dependency_mapper: Maps vulns to dependency trees.
-            tree_merger: Merges multiple trees into one.
+            orchestrator: Merges multiple trees into one.
             tree_normalizer: Normalizes tree to flat records.
             storage: Persists scan results.
         """
         self.derivation_source = derivation_source
         self.vulnerability_scanner = vulnerability_scanner
         self.dependency_mapper = dependency_mapper
-        self.tree_merger = tree_merger
+        self.orchestrator = orchestrator
         self.tree_normalizer = tree_normalizer
         self.storage = storage
 
@@ -132,7 +135,11 @@ class ScanPipeline:
             derivation_source=MockDerivationSource(),
             vulnerability_scanner=MockVulnerabilityScanner(),
             dependency_mapper=MockDependencyMapper(),
-            tree_merger=TreeMergerImpl(),
+            orchestrator=TreeOrchestrator(
+                parser=TreeParserImpl(),
+                merger=TreeMergerImpl(),
+                formatter=TreeFormatterImpl(),
+            ),
             tree_normalizer=TreeNormalizerImpl(),
             storage=MockStorage(),
         )
@@ -144,7 +151,7 @@ class ScanPipeline:
             1. Resolve derivation via DerivationSource
             2. Scan for vulnerabilities via VulnerabilityScanner
             3. Map dependencies via DependencyMapper
-            4. Merge trees via TreeMerger
+            4. Merge trees via TreeOrchestrator
             5. Normalize to flat records via TreeNormalizer
             6. Persist to storage
 
@@ -171,14 +178,14 @@ class ScanPipeline:
                 vuln_map[drv] = vuln
 
         # Step 3: Get dependency trees for each vulnerability
-        dep_trees: list[dict[str, Any]] = []
+        dep_trees: str = ""
         for vuln in vulns:
             drv = vuln.get("derivation", "")
             tree = self.dependency_mapper.why_depends(system_derivation, drv)
-            dep_trees.extend(tree)
+            dep_trees = f"{dep_trees}\n{tree}"
 
         # Step 4: Merge trees
-        merged = self.tree_merger.merge_trees(dep_trees)
+        merged = self.orchestrator.process_tree_output(dep_trees)['tree']
 
         # Step 5: Normalize to flat records using the vuln_map from step 2
         records = self.tree_normalizer.normalize(merged, vuln_map)

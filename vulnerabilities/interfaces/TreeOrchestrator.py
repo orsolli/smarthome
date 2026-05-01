@@ -5,7 +5,3 @@ class TreeOrchestratorInterface(ABC):
     @abstractmethod
     def process_tree_output(self, input_text: str) -> Dict[str, Any]:
         pass
-
-    @abstractmethod
-    def merge_nix_trees(self, input_text: str) -> Dict[str, Any]:
-        pass
