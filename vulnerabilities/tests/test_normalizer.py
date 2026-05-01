@@ -2,9 +2,9 @@
 
 import unittest
 
-from mock.mock_vulnix import scan_vulnerabilities as _demo_vulns
+from mock.mock_vulnix import MockVulnerabilityScanner
 from core.normalizer import (
-    normalize_tree,
+    TreeNormalizerImpl,
     _severity_from_cvss,
 )
 
@@ -36,36 +36,9 @@ class TestSeverityFromCvss(unittest.TestCase):
 
 def _make_vuln_lookup():
     """Create a vulnerability lookup function from demo data."""
-    vulns = _demo_vulns("")
+    vulns = MockVulnerabilityScanner().scan_vulnerabilities("")
     
-    def lookup(pname: str, drv_path: str) -> dict:
-        """Look up vuln info by pname or drv_path."""
-        for vuln in vulns:
-            if vuln.get("pname") == pname or vuln.get("derivation") == drv_path:
-                return vuln
-        return {}
-    
-    return lookup
-
-
-class TestFindVulnInfo(unittest.TestCase):
-    def test_found_by_pname(self):
-        """Finding by pname returns matching vuln."""
-        lookup = _make_vuln_lookup()
-        result = lookup("Diff", "")
-        self.assertEqual(result["pname"], "Diff")
-
-    def test_found_by_drv_path(self):
-        """Finding by drv_path returns matching vuln."""
-        lookup = _make_vuln_lookup()
-        result = lookup("", "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv")
-        self.assertEqual(result["pname"], "Diff")
-
-    def test_not_found(self):
-        """Non-existent package returns empty dict."""
-        lookup = _make_vuln_lookup()
-        result = lookup("nonexistent", "")
-        self.assertEqual(result, {})
+    return {v.get("derivation"): v for v in vulns}
 
 
 class TestNormalizeTree(unittest.TestCase):
@@ -74,7 +47,7 @@ class TestNormalizeTree(unittest.TestCase):
 
     def test_empty_tree(self):
         """Empty tree returns no records."""
-        result = normalize_tree({}, vuln_lookup=self.lookup)
+        result = TreeNormalizerImpl().normalize({}, vuln_map=self.lookup)
         self.assertEqual(result, [])
 
     def test_vulnerable_node(self):
@@ -84,7 +57,7 @@ class TestNormalizeTree(unittest.TestCase):
             "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
             "children": [],
         }
-        result = normalize_tree(tree, vuln_lookup=self.lookup)
+        result = TreeNormalizerImpl().normalize(tree, vuln_map=self.lookup)
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]["package_name"], "Diff")
         self.assertEqual(result[0]["severity"], "CRITICAL")
@@ -96,7 +69,7 @@ class TestNormalizeTree(unittest.TestCase):
             "drv_path": "/nix/store/clean.drv",
             "children": [],
         }
-        result = normalize_tree(tree, vuln_lookup=self.lookup)
+        result = TreeNormalizerImpl().normalize(tree, vuln_map=self.lookup)
         self.assertEqual(result, [])
 
     def test_nested_vulnerable_nodes(self):
@@ -117,7 +90,7 @@ class TestNormalizeTree(unittest.TestCase):
                 },
             ],
         }
-        result = normalize_tree(tree, vuln_lookup=self.lookup)
+        result = TreeNormalizerImpl().normalize(tree, vuln_map=self.lookup)
         self.assertEqual(len(result), 2)
         pnames = {r["package_name"] for r in result}
         self.assertIn("ShellCheck", pnames)
@@ -125,4 +98,6 @@ class TestNormalizeTree(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()

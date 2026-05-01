@@ -1,7 +1,28 @@
 import sys
 import os
 
-from tree_parser import merge_nix_trees
+from typing import Dict, Any
+from interfaces import (
+    TreeParserInterface,
+    TreeMergerInterface,
+    TreeFormatterInterface,
+    TreeOrchestratorInterface
+)
+from core.parser import TreeParserImpl
+from core.merger import TreeMergerImpl
+from core.formatter import TreeFormatterImpl
+from core.orchestrator import TreeOrchestrator
+import json
+
+def get_tree_parser_orchestrator() -> TreeOrchestratorInterface:
+    parser = TreeParserImpl()
+    merger = TreeMergerImpl()
+    formatter = TreeFormatterImpl()
+    return TreeOrchestrator(parser, merger, formatter)
+
+def merge_nix_trees(input_text: str) -> Dict[str, Any]:
+    orchestrator = get_tree_parser_orchestrator()
+    return orchestrator.merge_nix_trees(input_text)
 
 def main():
     input_text = """/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv

@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from core.merger import merge_dependency_trees, _dict_to_text, _trees_to_text
+from core.merger import TreeMergerImpl, _dict_to_text, _trees_to_text
 
 
 class TestDictToText(unittest.TestCase):
@@ -57,25 +57,27 @@ class TestTreesToText(unittest.TestCase):
 class TestMergeDependencyTrees(unittest.TestCase):
     def test_empty_input(self):
         """Empty input returns empty dict."""
-        result = merge_dependency_trees([])
-        self.assertEqual(result, {})
+        result = TreeMergerImpl().merge_trees([])
+        self.assertEqual(result.get('children', []), [])
 
     def test_single_tree(self):
         """A single tree is returned (possibly modified by tree_parser)."""
         trees = [
             {
                 "drv_path": "/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv",
+                "name": "nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018",
                 "pname": "nixos-system-OrjanAMD",
                 "children": [
                     {
                         "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
+                        "name": "Diff-1.0.2",
                         "pname": "Diff",
                         "children": [],
                     }
                 ],
             }
         ]
-        result = merge_dependency_trees(trees)
+        result = TreeMergerImpl().merge_trees(trees)
         self.assertIsInstance(result, dict)
 
     def test_multiple_trees(self):
@@ -83,10 +85,12 @@ class TestMergeDependencyTrees(unittest.TestCase):
         trees = [
             {
                 "drv_path": "/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv",
+                "name": "nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018",
                 "pname": "nixos-system-OrjanAMD",
                 "children": [
                     {
                         "drv_path": "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv",
+                        "name": "Diff-1.0.2",
                         "pname": "Diff",
                         "children": [],
                     }
@@ -94,19 +98,23 @@ class TestMergeDependencyTrees(unittest.TestCase):
             },
             {
                 "drv_path": "/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv",
+                "name": "nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018",
                 "pname": "nixos-system-OrjanAMD",
                 "children": [
                     {
                         "drv_path": "/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv",
+                        "name": "ShellCheck-0.11.0",
                         "pname": "ShellCheck",
                         "children": [],
                     }
                 ],
             },
         ]
-        result = merge_dependency_trees(trees)
+        result = TreeMergerImpl().merge_trees(trees)
         self.assertIsInstance(result, dict)
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()

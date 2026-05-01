@@ -7,7 +7,7 @@ of the StorageInterface for the scan pipeline.
 import sqlite3
 
 from interfaces import StorageInterface
-import database
+from core import database
 
 
 class DatabaseStorage(StorageInterface):

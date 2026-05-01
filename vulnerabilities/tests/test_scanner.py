@@ -4,6 +4,7 @@ import os
 import tempfile
 import unittest
 
+from core.orchestrator import TreeOrchestrator
 from core.scanner import (
     MockDerivationSource,
     MockVulnerabilityScanner,
@@ -18,6 +19,7 @@ from interfaces import (
     VulnerabilityScannerInterface,
     DependencyMapperInterface,
     TreeMergerInterface,
+    TreeOrchestratorInterface,
     TreeNormalizerInterface,
     StorageInterface,
 )
@@ -57,7 +59,7 @@ class TestMockDependencyMapper(unittest.TestCase):
         system = "/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv"
         target = "/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv"
         result = mapper.why_depends(system, target)
-        self.assertIsInstance(result, list)
+        self.assertIsInstance(result, str)
         self.assertGreater(len(result), 0)
 
 
@@ -162,7 +164,7 @@ class TestScanPipeline(unittest.TestCase):
         self.assertIsInstance(pipeline.derivation_source, MockDerivationSource)
         self.assertIsInstance(pipeline.vulnerability_scanner, MockVulnerabilityScanner)
         self.assertIsInstance(pipeline.dependency_mapper, MockDependencyMapper)
-        self.assertIsInstance(pipeline.tree_merger, TreeMergerImpl)
+        self.assertIsInstance(pipeline.orchestrator, TreeOrchestrator)
         self.assertIsInstance(pipeline.tree_normalizer, TreeNormalizerImpl)
         self.assertIsInstance(pipeline.storage, MockStorage)
 
@@ -202,9 +204,9 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
             def why_depends(self, system, target):
                 return [{"drv_path": system, "pname": "root", "children": [{"drv_path": target, "pname": "vuln", "children": []}]}]
 
-        class CustomTreeMerger(TreeMergerInterface):
-            def merge_trees(self, trees):
-                return {"drv_path": "/nix/store/merged.drv", "pname": "merged", "children": []}
+        class CustomTreeOrchestrator(TreeOrchestratorInterface):
+            def process_tree_output(self, trees):
+                return {"drv_path": "/nix/store/merged.drv", "name": "merged", "children": []}
 
         class CustomTreeNormalizer(TreeNormalizerInterface):
             def normalize(self, tree, vuln_map=None):
@@ -228,7 +230,7 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
             derivation_source=CustomDerivationSource(),
             vulnerability_scanner=CustomVulnerabilityScanner(),
             dependency_mapper=CustomDependencyMapper(),
-            tree_merger=CustomTreeMerger(),
+            orchestrator=CustomTreeOrchestrator(),
             tree_normalizer=CustomTreeNormalizer(),
             storage=CustomStorage(),
         )
@@ -238,4 +240,6 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
     unittest.main()
