@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "vulnerabilities"
+version = "0.1"
+description = "Smart home vulnerability scanner"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+bottle = "^1.0.0"
+pydantic = "^2.0.0"
+sqlalchemy = "^1.4.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
