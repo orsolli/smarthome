@@ -1,6 +1,51 @@
 from typing import List, Dict, Any
 from interfaces.TreeParser import TreeParserInterface
-from utils.tree_utils import count_indent, get_node_name
+
+def _count_indent(line: str) -> int:
+    """
+    Count the indentation level of a tree line.
+    
+    Each level is represented by 4 characters:
+    - │   (vertical bar + 3 spaces)
+    -     (4 spaces)
+    
+    Returns the number of indentation groups.
+    """
+    if not line.strip():
+        return -1
+    
+    count = 0
+    i = 0
+    while i + 4 <= len(line):
+        chunk = line[i:i+4]
+        if chunk == '│   ' or chunk == '└───' or chunk == '├───' or chunk == '    ':
+            count += 1
+            i += 4
+        else:
+            break
+    
+    return count
+
+
+def _get_node_name(line: str) -> str:
+    """Get the node name from a tree line."""
+    line = line.strip()
+    if not line:
+        return ""
+    
+    # Find where the name starts (after tree symbols and spaces)
+    i = 0
+    while i < len(line):
+        if line[i] == '│':
+            i += 4
+        elif line[i] in ['└', '├']:
+            i += 4
+        elif line[i] == ' ':
+            i += 1
+        else:
+            break
+    
+    return line[i:].strip()
 
 class TreeParserImpl(TreeParserInterface):
     def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:
@@ -15,8 +60,8 @@ class TreeParserImpl(TreeParserInterface):
         path_nodes = [root]
         
         for line in lines[1:]:
-            depth = count_indent(line)
-            node_name = get_node_name(line)
+            depth = _count_indent(line)
+            node_name = _get_node_name(line)
             
             if depth == -1 or not node_name:
                 continue
