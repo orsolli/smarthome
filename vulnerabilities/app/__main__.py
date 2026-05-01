@@ -14,6 +14,8 @@ from core.formatter import TreeFormatterImpl
 from core.orchestrator import TreeOrchestrator
 import json
 
+from app import app
+
 def get_tree_parser_orchestrator() -> TreeOrchestratorInterface:
     parser = TreeParserImpl()
     merger = TreeMergerImpl()
@@ -45,7 +47,7 @@ def main():
     print("\n\nASCII tree:")
     print(result['ascii'])
     
-    return result
+    return app.main()
 
 if __name__ == "__main__":
     main()

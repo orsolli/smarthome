@@ -8,7 +8,7 @@ from pathlib import Path
 
 from bottle import Bottle, request, run, response
 
-import core.database
+from core import database
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 

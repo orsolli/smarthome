@@ -4,19 +4,17 @@ graph LR
     %% Subgraphs
     subgraph File: __main__
         direction LR
-        node___main___global_986["0: (global)()"]:::trunk
-        node___main___get_tree_parser_orchestrator_1d0["17: get_tree_parser_orchestrator()"]:::filled
-        node___main___main_f54["27: main()"]:::filled
-        node___main___merge_nix_trees_c57["23: merge_nix_trees()"]:::filled
+        node___main___global_725["0: (global)()"]:::trunk
+        node___main___get_tree_parser_orchestrator_1d0["19: get_tree_parser_orchestrator()"]:::filled
+        node___main___main_2d8["29: main()"]:::filled
+        node___main___merge_nix_trees_c57["25: merge_nix_trees()"]:::filled
     end
     subgraph File: app
         direction LR
-        node_app_global_897["0: (global)()"]:::trunk
-        node_app_main_9c5["117: main()"]:::filled
+        node_app_global_e82["0: (global)()"]:::trunk
+        node_app_main_9c5["117: main()"]:::leaf
         node_app_run_scan_0f4["28: run_scan()"]:::filled
         node_app_scan_endpoint_42a["49: scan_endpoint()"]:::trunk
-        node_app_tree_endpoint_060["92: tree_endpoint()"]:::trunk
-        node_app_vulnerabilities_endpoint_aa6["66: vulnerabilities_endpoint()"]:::trunk
     end
     subgraph File: database
         direction LR
@@ -298,19 +296,14 @@ graph LR
     end
 
     %% Edges
-    node___main___global_986 --> node___main___main_f54
+    node___main___global_725 --> node___main___main_2d8
     node___main___get_tree_parser_orchestrator_1d0 --> node_TreeOrchestrator___init___d80
-    node___main___main_f54 --> node___main___merge_nix_trees_c57
+    node___main___main_2d8 --> node___main___merge_nix_trees_c57
     node___main___merge_nix_trees_c57 --> node___main___get_tree_parser_orchestrator_1d0
-    node_app_global_897 --> node_app_main_9c5
-    node_app_global_897 --> node_DatabaseStorage___init___8bc
-    node_app_main_9c5 --> node_database_init_db_6e2
+    node_app_global_e82 --> node_app_main_9c5
+    node_app_global_e82 --> node_DatabaseStorage___init___8bc
     node_app_run_scan_0f4 --> node_ScanPipeline_run_scan_d6e
     node_app_scan_endpoint_42a --> node_app_run_scan_0f4
-    node_app_tree_endpoint_060 --> node_database_get_dependency_tree_for_scan_426
-    node_app_tree_endpoint_060 --> node_database_init_db_6e2
-    node_app_vulnerabilities_endpoint_aa6 --> node_database_get_vulnerabilities_since_ea4
-    node_app_vulnerabilities_endpoint_aa6 --> node_database_init_db_6e2
     node_TreeFormatterImpl__format_children_32b --> node_TreeFormatterImpl__format_children_32b
     node_TreeFormatterImpl__format_children_top_level_558 --> node_TreeFormatterImpl__format_children_32b
     node_TreeFormatterImpl_generate_ascii_tree_d79 --> node_TreeFormatterImpl__format_children_32b
@@ -406,112 +399,107 @@ graph LR
     node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 --> node_TestTreeNormalizerImpl__make_vuln_map_246
 
     %% Edge styles
-    linkStyle 0 stroke:#D55E00
+    linkStyle 0 stroke:#0072B2
     linkStyle 1 stroke:#000000
-    linkStyle 2 stroke:#F0E442
+    linkStyle 2 stroke:#000000
     linkStyle 3 stroke:#CC79A7
-    linkStyle 4 stroke:#CC79A7
-    linkStyle 5 stroke:#CC79A7
-    linkStyle 6 stroke:#0072B2
-    linkStyle 7 stroke:#F0E442
-    linkStyle 8 stroke:#56B4E9
+    linkStyle 4 stroke:#56B4E9
+    linkStyle 5 stroke:#56B4E9
+    linkStyle 6 stroke:#F0E442
+    linkStyle 7 stroke:#56B4E9
+    linkStyle 8 stroke:#009E73
     linkStyle 9 stroke:#000000
-    linkStyle 10 stroke:#000000
-    linkStyle 11 stroke:#D55E00
-    linkStyle 12 stroke:#D55E00
-    linkStyle 13 stroke:#009E73
+    linkStyle 10 stroke:#E69F00
+    linkStyle 11 stroke:#E69F00
+    linkStyle 12 stroke:#009E73
+    linkStyle 13 stroke:#000000
     linkStyle 14 stroke:#000000
-    linkStyle 15 stroke:#E69F00
-    linkStyle 16 stroke:#E69F00
-    linkStyle 17 stroke:#009E73
-    linkStyle 18 stroke:#000000
-    linkStyle 19 stroke:#000000
-    linkStyle 20 stroke:#000000
-    linkStyle 21 stroke:#000000
+    linkStyle 15 stroke:#000000
+    linkStyle 16 stroke:#000000
+    linkStyle 17 stroke:#56B4E9
+    linkStyle 18 stroke:#56B4E9
+    linkStyle 19 stroke:#CC79A7
+    linkStyle 20 stroke:#CC79A7
+    linkStyle 21 stroke:#56B4E9
     linkStyle 22 stroke:#56B4E9
-    linkStyle 23 stroke:#56B4E9
-    linkStyle 24 stroke:#CC79A7
-    linkStyle 25 stroke:#CC79A7
-    linkStyle 26 stroke:#56B4E9
-    linkStyle 27 stroke:#56B4E9
-    linkStyle 28 stroke:#000000
-    linkStyle 29 stroke:#F0E442
-    linkStyle 30 stroke:#0072B2
-    linkStyle 31 stroke:#000000
-    linkStyle 32 stroke:#E69F00
-    linkStyle 33 stroke:#E69F00
-    linkStyle 34 stroke:#D55E00
+    linkStyle 23 stroke:#000000
+    linkStyle 24 stroke:#F0E442
+    linkStyle 25 stroke:#0072B2
+    linkStyle 26 stroke:#000000
+    linkStyle 27 stroke:#E69F00
+    linkStyle 28 stroke:#E69F00
+    linkStyle 29 stroke:#D55E00
+    linkStyle 30 stroke:#009E73
+    linkStyle 31 stroke:#0072B2
+    linkStyle 32 stroke:#009E73
+    linkStyle 33 stroke:#D55E00
+    linkStyle 34 stroke:#E69F00
     linkStyle 35 stroke:#009E73
-    linkStyle 36 stroke:#0072B2
-    linkStyle 37 stroke:#009E73
-    linkStyle 38 stroke:#D55E00
-    linkStyle 39 stroke:#E69F00
-    linkStyle 40 stroke:#009E73
-    linkStyle 41 stroke:#000000
-    linkStyle 42 stroke:#F0E442
-    linkStyle 43 stroke:#CC79A7
+    linkStyle 36 stroke:#000000
+    linkStyle 37 stroke:#F0E442
+    linkStyle 38 stroke:#CC79A7
+    linkStyle 39 stroke:#F0E442
+    linkStyle 40 stroke:#56B4E9
+    linkStyle 41 stroke:#E69F00
+    linkStyle 42 stroke:#E69F00
+    linkStyle 43 stroke:#E69F00
     linkStyle 44 stroke:#F0E442
-    linkStyle 45 stroke:#56B4E9
-    linkStyle 46 stroke:#E69F00
-    linkStyle 47 stroke:#E69F00
-    linkStyle 48 stroke:#E69F00
-    linkStyle 49 stroke:#F0E442
-    linkStyle 50 stroke:#F0E442
-    linkStyle 51 stroke:#F0E442
-    linkStyle 52 stroke:#009E73
-    linkStyle 53 stroke:#009E73
-    linkStyle 54 stroke:#009E73
-    linkStyle 55 stroke:#E69F00
-    linkStyle 56 stroke:#E69F00
-    linkStyle 57 stroke:#E69F00
-    linkStyle 58 stroke:#F0E442
-    linkStyle 59 stroke:#F0E442
+    linkStyle 45 stroke:#F0E442
+    linkStyle 46 stroke:#F0E442
+    linkStyle 47 stroke:#009E73
+    linkStyle 48 stroke:#009E73
+    linkStyle 49 stroke:#009E73
+    linkStyle 50 stroke:#E69F00
+    linkStyle 51 stroke:#E69F00
+    linkStyle 52 stroke:#E69F00
+    linkStyle 53 stroke:#F0E442
+    linkStyle 54 stroke:#F0E442
+    linkStyle 55 stroke:#000000
+    linkStyle 56 stroke:#0072B2
+    linkStyle 57 stroke:#0072B2
+    linkStyle 58 stroke:#D55E00
+    linkStyle 59 stroke:#CC79A7
     linkStyle 60 stroke:#000000
-    linkStyle 61 stroke:#0072B2
-    linkStyle 62 stroke:#0072B2
+    linkStyle 61 stroke:#CC79A7
+    linkStyle 62 stroke:#E69F00
     linkStyle 63 stroke:#D55E00
-    linkStyle 64 stroke:#CC79A7
-    linkStyle 65 stroke:#000000
-    linkStyle 66 stroke:#CC79A7
-    linkStyle 67 stroke:#E69F00
-    linkStyle 68 stroke:#D55E00
-    linkStyle 69 stroke:#E69F00
-    linkStyle 70 stroke:#E69F00
-    linkStyle 71 stroke:#E69F00
-    linkStyle 72 stroke:#0072B2
-    linkStyle 73 stroke:#0072B2
-    linkStyle 74 stroke:#0072B2
-    linkStyle 75 stroke:#D55E00
-    linkStyle 76 stroke:#D55E00
-    linkStyle 77 stroke:#F0E442
-    linkStyle 78 stroke:#F0E442
-    linkStyle 79 stroke:#F0E442
+    linkStyle 64 stroke:#E69F00
+    linkStyle 65 stroke:#E69F00
+    linkStyle 66 stroke:#E69F00
+    linkStyle 67 stroke:#0072B2
+    linkStyle 68 stroke:#0072B2
+    linkStyle 69 stroke:#0072B2
+    linkStyle 70 stroke:#D55E00
+    linkStyle 71 stroke:#D55E00
+    linkStyle 72 stroke:#F0E442
+    linkStyle 73 stroke:#F0E442
+    linkStyle 74 stroke:#F0E442
+    linkStyle 75 stroke:#0072B2
+    linkStyle 76 stroke:#CC79A7
+    linkStyle 77 stroke:#0072B2
+    linkStyle 78 stroke:#0072B2
+    linkStyle 79 stroke:#0072B2
     linkStyle 80 stroke:#0072B2
-    linkStyle 81 stroke:#CC79A7
-    linkStyle 82 stroke:#0072B2
-    linkStyle 83 stroke:#0072B2
-    linkStyle 84 stroke:#0072B2
-    linkStyle 85 stroke:#0072B2
-    linkStyle 86 stroke:#0072B2
-    linkStyle 87 stroke:#56B4E9
-    linkStyle 88 stroke:#56B4E9
-    linkStyle 89 stroke:#56B4E9
-    linkStyle 90 stroke:#F0E442
-    linkStyle 91 stroke:#F0E442
-    linkStyle 92 stroke:#F0E442
-    linkStyle 93 stroke:#F0E442
-    linkStyle 94 stroke:#CC79A7
-    linkStyle 95 stroke:#000000
-    linkStyle 96 stroke:#000000
-    linkStyle 97 stroke:#000000
-    linkStyle 98 stroke:#000000
+    linkStyle 81 stroke:#0072B2
+    linkStyle 82 stroke:#56B4E9
+    linkStyle 83 stroke:#56B4E9
+    linkStyle 84 stroke:#56B4E9
+    linkStyle 85 stroke:#F0E442
+    linkStyle 86 stroke:#F0E442
+    linkStyle 87 stroke:#F0E442
+    linkStyle 88 stroke:#F0E442
+    linkStyle 89 stroke:#CC79A7
+    linkStyle 90 stroke:#000000
+    linkStyle 91 stroke:#000000
+    linkStyle 92 stroke:#000000
+    linkStyle 93 stroke:#000000
+    linkStyle 94 stroke:#000000
+    linkStyle 95 stroke:#E69F00
+    linkStyle 96 stroke:#CC79A7
+    linkStyle 97 stroke:#0072B2
+    linkStyle 98 stroke:#CC79A7
     linkStyle 99 stroke:#000000
-    linkStyle 100 stroke:#E69F00
-    linkStyle 101 stroke:#CC79A7
-    linkStyle 102 stroke:#0072B2
-    linkStyle 103 stroke:#CC79A7
-    linkStyle 104 stroke:#000000
-    linkStyle 105 stroke:#000000
+    linkStyle 100 stroke:#000000
 
     %% Node styles
     classDef filled fill:#555555,stroke:#000000,stroke-width:2px;

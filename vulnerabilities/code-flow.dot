@@ -14,16 +14,14 @@ subgraph legend{
         <tr><td>Function call</td><td><font color='black'>&#8594;</font></td></tr>
         </table></td></tr></table>
         >];
-}node___main___global_986 [label="0: (global)()" name="__main__::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node___main___get_tree_parser_orchestrator_1d0 [label="17: get_tree_parser_orchestrator()" name="__main__::get_tree_parser_orchestrator" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node___main___main_f54 [label="27: main()" name="__main__::main" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node___main___merge_nix_trees_c57 [label="23: merge_nix_trees()" name="__main__::merge_nix_trees" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_app_global_897 [label="0: (global)()" name="app::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_app_main_9c5 [label="117: main()" name="app::main" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+}node___main___global_725 [label="0: (global)()" name="__main__::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node___main___get_tree_parser_orchestrator_1d0 [label="19: get_tree_parser_orchestrator()" name="__main__::get_tree_parser_orchestrator" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node___main___main_2d8 [label="29: main()" name="__main__::main" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node___main___merge_nix_trees_c57 [label="25: merge_nix_trees()" name="__main__::merge_nix_trees" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_app_global_e82 [label="0: (global)()" name="app::(global)" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_app_main_9c5 [label="117: main()" name="app::main" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_app_run_scan_0f4 [label="28: run_scan()" name="app::run_scan" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_app_scan_endpoint_42a [label="49: scan_endpoint()" name="app::scan_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_app_tree_endpoint_060 [label="92: tree_endpoint()" name="app::tree_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_app_vulnerabilities_endpoint_aa6 [label="66: vulnerabilities_endpoint()" name="app::vulnerabilities_endpoint" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_database_get_dependency_tree_for_scan_426 [label="179: get_dependency_tree_for_scan()" name="database::get_dependency_tree_for_scan" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_database_get_vulnerabilities_since_ea4 [label="140: get_vulnerabilities_since()" name="database::get_vulnerabilities_since" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_database_init_db_6e2 [label="47: init_db()" name="database::init_db" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
@@ -102,19 +100,14 @@ node_TestTreeNormalizerImpl__make_vuln_map_246 [label="86: _make_vuln_map()" nam
 node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 [label="120: test_normalize_empty_tree()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_empty_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 [label="104: test_normalize_with_custom_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_custom_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 [label="89: test_normalize_with_mock_lookup()" name="test_scanner::TestTreeNormalizerImpl.test_normalize_with_mock_lookup" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node___main___global_986 -> node___main___main_f54 [color="#D55E00" penwidth="2"];
+node___main___global_725 -> node___main___main_2d8 [color="#0072B2" penwidth="2"];
 node___main___get_tree_parser_orchestrator_1d0 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
-node___main___main_f54 -> node___main___merge_nix_trees_c57 [color="#F0E442" penwidth="2"];
+node___main___main_2d8 -> node___main___merge_nix_trees_c57 [color="#000000" penwidth="2"];
 node___main___merge_nix_trees_c57 -> node___main___get_tree_parser_orchestrator_1d0 [color="#CC79A7" penwidth="2"];
-node_app_global_897 -> node_app_main_9c5 [color="#CC79A7" penwidth="2"];
-node_app_global_897 -> node_DatabaseStorage___init___8bc [color="#CC79A7" penwidth="2"];
-node_app_main_9c5 -> node_database_init_db_6e2 [color="#0072B2" penwidth="2"];
+node_app_global_e82 -> node_app_main_9c5 [color="#56B4E9" penwidth="2"];
+node_app_global_e82 -> node_DatabaseStorage___init___8bc [color="#56B4E9" penwidth="2"];
 node_app_run_scan_0f4 -> node_ScanPipeline_run_scan_d6e [color="#F0E442" penwidth="2"];
 node_app_scan_endpoint_42a -> node_app_run_scan_0f4 [color="#56B4E9" penwidth="2"];
-node_app_tree_endpoint_060 -> node_database_get_dependency_tree_for_scan_426 [color="#000000" penwidth="2"];
-node_app_tree_endpoint_060 -> node_database_init_db_6e2 [color="#000000" penwidth="2"];
-node_app_vulnerabilities_endpoint_aa6 -> node_database_get_vulnerabilities_since_ea4 [color="#D55E00" penwidth="2"];
-node_app_vulnerabilities_endpoint_aa6 -> node_database_init_db_6e2 [color="#D55E00" penwidth="2"];
 node_TreeFormatterImpl__format_children_32b -> node_TreeFormatterImpl__format_children_32b [color="#009E73" penwidth="2"];
 node_TreeFormatterImpl__format_children_top_level_558 -> node_TreeFormatterImpl__format_children_32b [color="#000000" penwidth="2"];
 node_TreeFormatterImpl_generate_ascii_tree_d79 -> node_TreeFormatterImpl__format_children_32b [color="#E69F00" penwidth="2"];
@@ -209,14 +202,14 @@ node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 -> node_TreeNo
 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 -> node_TreeNormalizerImpl_normalize_d22 [color="#000000" penwidth="2"];
 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 -> node_TestTreeNormalizerImpl__make_vuln_map_246 [color="#000000" penwidth="2"];
 subgraph cluster____main___efb {
-    node___main___get_tree_parser_orchestrator_1d0 node___main___merge_nix_trees_c57 node___main___main_f54 node___main___global_986;
+    node___main___get_tree_parser_orchestrator_1d0 node___main___merge_nix_trees_c57 node___main___main_2d8 node___main___global_725;
     label="File: __main__";
     name="__main__";
     style="filled";
     graph[style=dotted];
 };
 subgraph cluster__app_ecd {
-    node_app_run_scan_0f4 node_app_scan_endpoint_42a node_app_vulnerabilities_endpoint_aa6 node_app_tree_endpoint_060 node_app_main_9c5 node_app_global_897;
+    node_app_run_scan_0f4 node_app_scan_endpoint_42a node_app_main_9c5 node_app_global_e82;
     label="File: app";
     name="app";
     style="filled";
