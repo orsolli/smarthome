@@ -9,11 +9,12 @@ The merger converts between the original dependency tree format
 """
 
 import copy
-from typing import Any
+from typing import Any, Sequence, List
 
-from interfaces import TreeMergerInterface
+from interfaces import TreeMergerInterface, TreeNodeDict
 
-def _trees_to_text(trees: list[dict[str, Any]]) -> str:
+
+def _trees_to_text(trees: Sequence[dict[str, Any]]) -> str:
     """Convert a list of dependency tree dicts to text format.
 
     Args:
@@ -119,7 +120,7 @@ def _strip_tree_chars(s: str) -> str:
 class TreeMergerImpl(TreeMergerInterface):
     """Implementation of TreeMergerInterface using tree_parser."""
 
-    def merge_trees(self, trees: list[dict[str, Any]]) -> dict[str, Any]:
+    def merge_trees(self, trees: list[TreeNodeDict]) -> TreeNodeDict:
         """Merge multiple dependency trees into one.
 
         Args:
@@ -129,11 +130,11 @@ class TreeMergerImpl(TreeMergerInterface):
             A consolidated tree dict with overlapping paths merged.
         """
         if not trees:
-            return {'name': '.', 'type': 'directory', 'children': []}
+            return {'name': '.', 'children': []}
         
-        root = {'name': '.', 'type': 'directory', 'children': []}
+        root: TreeNodeDict = {'name': '.', 'children': []}
         
-        def add_node(parent_node: dict[str, Any], new_node: dict[str, Any]):
+        def add_node(parent_node: TreeNodeDict, new_node: TreeNodeDict):
             existing_child = None
             for child in parent_node.get('children', []):
                 if child['name'] == new_node['name']:
@@ -151,6 +152,7 @@ class TreeMergerImpl(TreeMergerInterface):
 
         for tree in trees:
             add_node(root, tree)
-            
-        root['children'].sort(key=lambda x: x['name'])
+
+        children = root['children']
+        children.sort(key=lambda x: x['name'])
         return root

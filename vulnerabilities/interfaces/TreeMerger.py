@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Sequence
+from typing_extensions import TypedDict
+from interfaces.TreeNodeDict import TreeNodeDict
 
 class TreeMergerInterface(ABC):
     @abstractmethod
-    def merge_trees(self, trees: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def merge_trees(self, trees: List[TreeNodeDict]) -> TreeNodeDict:
         pass

@@ -9,3 +9,4 @@ from .interfaces import (
     TreeNormalizerInterface,
     StorageInterface
 )
+from .TreeNodeDict import TreeNodeDict

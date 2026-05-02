@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
+from interfaces.TreeNodeDict import TreeNodeDict
 
 class TreeParserInterface(ABC):
     @abstractmethod
-    def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:
+    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict:
         pass
 
     @abstractmethod

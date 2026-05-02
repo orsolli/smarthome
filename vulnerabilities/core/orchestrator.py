@@ -1,4 +1,3 @@
-from typing import List, Dict, Any
 import json
 from interfaces.TreeParser import TreeParserInterface
 from interfaces.TreeMerger import TreeMergerInterface
@@ -14,7 +13,7 @@ class TreeOrchestrator(TreeOrchestratorInterface):
         self.merger = merger
         self.formatter = formatter
 
-    def process_tree_output(self, input_text: str) -> Dict[str, Any]:
+    def process_tree_output(self, input_text: str):
         tree_blocks = self.parser.split_into_trees(input_text)
         
         tree_dicts = []
