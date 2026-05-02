@@ -84,7 +84,7 @@ def _get_node_name(line: str) -> tuple[str, str, str]:
 
 
 class TreeParserImpl(TreeParserInterface):
-    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict:
+    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict | None:
         lines = [line_ for line_ in lines if line_.strip()]
         
         if not lines:
