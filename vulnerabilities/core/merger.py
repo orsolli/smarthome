@@ -14,7 +14,7 @@ from typing import Any, Sequence, List
 from interfaces import TreeMergerInterface, TreeNodeDict
 
 
-def _trees_to_text(trees: Sequence[dict[str, Any]]) -> str:
+def _trees_to_text(trees: Sequence[TreeNodeDict]) -> str:
     """Convert a list of dependency tree dicts to text format.
 
     Args:
@@ -30,7 +30,7 @@ def _trees_to_text(trees: Sequence[dict[str, Any]]) -> str:
     return "\n".join(parts)
 
 
-def _dict_to_text(node: dict[str, Any], indent: int = 0) -> str:
+def _dict_to_text(node: TreeNodeDict, indent: int = 0) -> str:
     """Recursively convert a tree dict to text representation.
 
     Args:
@@ -48,59 +48,6 @@ def _dict_to_text(node: dict[str, Any], indent: int = 0) -> str:
     for child in node.get("children", []):
         lines.append(_dict_to_text(child, indent + 1))
     return "\n".join(lines)
-
-
-def _tree_to_dict(tree_node: dict[str, Any]) -> dict[str, Any]:
-    """Convert a tree_parser tree node back to the original format.
-
-    tree_parser outputs nodes with name, str_name, type, children keys.
-    This converts them back to pname, drv_path, children keys.
-
-    Args:
-        tree_node: A tree_parser tree node dict.
-
-    Returns:
-        A dict in the original format.
-    """
-    name = tree_node.get("name", "")
-    str_name = tree_node.get("str_name", "")
-
-    # Extract pname and drv_path from the display name.
-    # Format: "└──pname (/nix/store/...-drv.drv)" or "pname (/nix/store/...-drv.drv)"
-    # Strip tree drawing characters and extract pname and drv_path.
-    pname, drv_path = _parse_display_name(name)
-
-    return {
-        "pname": pname,
-        "drv_path": drv_path,
-        "children": [_tree_to_dict(child) for child in tree_node.get("children", [])],
-    }
-
-
-def _parse_display_name(name: str) -> tuple[str, str]:
-    """Parse a tree_parser display name into pname and drv_path.
-
-    Args:
-        name: Display name from tree_parser (e.g., "└──nixos-system-OrjanAMD (/nix/store/...-system.drv)")
-
-    Returns:
-        Tuple of (pname, drv_path).
-    """
-    # Find the opening parenthesis to separate pname from drv_path
-    paren_idx = name.find(" (")
-    if paren_idx == -1:
-        # No paren found; treat entire name as pname, empty drv_path
-        # Strip tree drawing characters
-        clean = _strip_tree_chars(name)
-        return clean, ""
-
-    pname_part = name[:paren_idx]
-    drv_path_part = name[paren_idx + 2:-1]  # Strip " (" prefix and ")" suffix
-
-    # Strip tree drawing characters from pname
-    pname = _strip_tree_chars(pname_part)
-
-    return pname, drv_path_part
 
 
 def _strip_tree_chars(s: str) -> str:
