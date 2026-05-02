@@ -1,15 +1,16 @@
 from typing import Dict, Any
 from interfaces.TreeFormatter import TreeFormatterInterface
+from interfaces.TreeNodeDict import TreeNodeDict
 
 
 class TreeFormatterImpl(TreeFormatterInterface):
-    def generate_ascii_tree(self, node: Dict[str, Any]) -> str:
+    def generate_ascii_tree(self, node: TreeNodeDict) -> str:
         """Generate ASCII tree representation."""
         children = node.get('children', [])
         
         # Skip synthetic '.' root node from merger
         if node.get('name') == '.' and len(children) > 0:
-            lines = self._format_children_top_level(node, children)
+            lines = self._format_children_top_level(children)
             return '\n'.join(lines) + '\n'
         
         lines = [node.get('name', '')]
@@ -28,7 +29,6 @@ class TreeFormatterImpl(TreeFormatterInterface):
             lines.append(connector + child.get('name', ''))
             
             child_lines = self._format_children(
-                child, 
                 child.get('children', []),
                 next_prefix
             )
@@ -37,7 +37,7 @@ class TreeFormatterImpl(TreeFormatterInterface):
         
         return '\n'.join(lines) + '\n'
     
-    def _format_children_top_level(self, node: Dict[str, Any], children: list) -> list:
+    def _format_children_top_level(self, children: list[TreeNodeDict]) -> list[str]:
         """Format children of the synthetic '.' root as top-level (no connector prefix)."""
         lines = []
         for i, child in enumerate(children):
@@ -53,14 +53,14 @@ class TreeFormatterImpl(TreeFormatterInterface):
             grand_children = child.get('children', [])
             if grand_children:
                 grand_children_lines = self._format_children(
-                    child, grand_children, next_prefix
+                    grand_children, next_prefix
                 )
                 if grand_children_lines:
                     lines.extend(grand_children_lines.split('\n'))
         
         return lines
     
-    def _format_children(self, node: Dict[str, Any], children: list, prefix: str) -> str:
+    def _format_children(self, children: list[TreeNodeDict], prefix: str) -> str:
         """Format children of a node recursively."""
         lines = []
         for i, child in enumerate(children):
@@ -76,7 +76,7 @@ class TreeFormatterImpl(TreeFormatterInterface):
             grand_children = child.get('children', [])
             if grand_children:
                 grand_children_lines = self._format_children(
-                    child, grand_children, next_prefix
+                    grand_children, next_prefix
                 )
                 if grand_children_lines:
                     lines.extend(grand_children_lines.split('\n'))

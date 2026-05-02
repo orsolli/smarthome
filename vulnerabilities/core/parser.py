@@ -1,5 +1,6 @@
-from typing import List, Dict, Any, Sequence
+from typing import List
 from interfaces.TreeParser import TreeParserInterface
+from interfaces.TreeNodeDict import TreeNodeDict
 
 
 def _count_indent(line: str) -> int:
@@ -50,16 +51,25 @@ def _get_node_name(line: str) -> str:
 
 
 class TreeParserImpl(TreeParserInterface):
-    def parse_tree_block(self, lines: List[str]) -> Dict[str, Any]:
+    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict:
         lines = [line_ for line_ in lines if line_.strip()]
         
         if not lines:
-            return {'name': '.', 'type': 'directory', 'children': []}
+            return {'name': '.', 'children': []}
         
-        root_name = lines[0].strip()
-        root = {'name': root_name, 'str_name': root_name, 'type': 'directory', 'children': []}
+        # Extract just the name from the root path (e.g., "root-1.0" from "/nix/store/xyz-root-1.0.drv")
+        root_path = lines[0].strip()
+        if '/nix/store/' in root_path:
+            root_name = root_path.rsplit('/nix/store/', 1)[-1]
+        else:
+            root_name = root_path
         
-        path_nodes: List[Dict[str, Any]] = [root]
+        root: TreeNodeDict = {
+            'name': root_name,
+            'children': []
+        }
+        
+        path_nodes: list[TreeNodeDict] = [root]
         
         for line in lines[1:]:
             depth = _count_indent(line)
@@ -69,43 +79,42 @@ class TreeParserImpl(TreeParserInterface):
                 continue
             
             if depth == 0:
-                child = {
+                child: TreeNodeDict = {
                     'name': node_name,
-                    'type': 'directory',
                     'children': []
                 }
                 root['children'].append(child)
-                path_nodes = [root, child]
+                path_nodes.append(child)
             else:
                 if depth - 1 < len(path_nodes):
                     parent = path_nodes[depth - 1]
                     if 'children' not in parent:
                         parent['children'] = []
                     
-                    node = {
+                    node: TreeNodeDict = {
                         'name': node_name,
-                        'name_str': node_name,
-                        'type': 'directory',
                         'children': []
                     }
                     parent['children'].append(node)
                     
-                    path_nodes = path_nodes[:depth + 1]
+                    # Trim path_nodes to current depth + new node
+                    path_nodes = path_nodes[:depth]
                     path_nodes.append(node)
                 else:
                     pass
+        
         return root
 
     def split_into_trees(self, input_text: str) -> List[List[str]]:
         lines = input_text.strip().split('\n')
         trees: List[List[str]] = []
-        current_block: List[str] = []  # type: ignore
+        current_block: List[str] = []
         
         for line in lines:
             if not line.strip():
                 continue
             
-            if line.startswith('/'):
+            if line.startswith('/') and line != '/nix/store':
                 if current_block:
                     trees.append(current_block)
                     current_block = []

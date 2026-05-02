@@ -13,7 +13,7 @@ class TestParser(unittest.TestCase):
         input_text = "/nix/store/a-b-c.drv\n└───/nix/store/d-e-f.1.drv\n/nix/store/g-h-i.j.k.drv"
         trees = parser.split_into_trees(input_text)
         self.assertEqual(len(trees), 2)
-        self.assertEqual(trees[0][0], "/nix/store/a")
+        self.assertEqual(trees[0][0], "/nix/store/a-b-c.drv")
 
     def test_parse_tree_block(self):
         from core.parser import TreeParserImpl
@@ -54,7 +54,7 @@ class TestParser(unittest.TestCase):
         result = parser.parse_tree_block(lines)
         
         # Check root
-        self.assertEqual(result['name'], 'oot-1.0')
+        self.assertEqual(result['name'], 'root-1.0')
 
 if __name__ == "__main__":
     unittest.main()

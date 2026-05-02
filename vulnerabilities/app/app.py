@@ -6,7 +6,7 @@ to run scans and serve results via a Bottle web server.
 
 from pathlib import Path
 
-from bottle import Bottle, request, run, response
+from bottle import Bottle, request, run, response  # type: ignore
 
 from core import database
 from core.database_storage import DatabaseStorage

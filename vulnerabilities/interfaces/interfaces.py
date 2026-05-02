@@ -95,7 +95,7 @@ class TreeNormalizerInterface(ABC):
         self,
         tree: dict[str, Any],
         vuln_map: dict[str, Any],
-    ) -> list[dict[str, Any]] | str:
+    ) -> list[dict[str, Any]]:
         """Convert a dependency tree into flat vulnerability records.
 
         Args:
