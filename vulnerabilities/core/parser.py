@@ -88,7 +88,7 @@ class TreeParserImpl(TreeParserInterface):
         lines = [line_ for line_ in lines if line_.strip()]
         
         if not lines:
-            return
+            return None
         
         # Extract just the name from the root path (e.g., "root-1.0" from "/nix/store/xyz-root-1.0.drv")
         root_path = lines[0].strip()

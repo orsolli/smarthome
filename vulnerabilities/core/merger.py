@@ -77,9 +77,9 @@ class TreeMergerImpl(TreeMergerInterface):
             A consolidated tree dict with overlapping paths merged.
         """
         if not trees:
-            return {'name': '.', 'children': []}
+            return None
         
-        root: TreeNodeDict = {'name': '.', 'children': []}
+        root: TreeNodeDict = {'name': '.', 'pname': '', 'drv_path': '', 'children': []}
         
         def add_node(parent_node: TreeNodeDict, new_node: TreeNodeDict):
             existing_child = None
@@ -101,5 +101,8 @@ class TreeMergerImpl(TreeMergerInterface):
             add_node(root, tree)
 
         children = root['children']
+        if len(children) <= 1:
+            return children[0]
+
         children.sort(key=lambda x: x['name'])
         return root

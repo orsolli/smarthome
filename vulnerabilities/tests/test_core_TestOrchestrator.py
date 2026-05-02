@@ -26,14 +26,14 @@ class TestOrchestrator(unittest.TestCase):
     └───/second/grand-child
         └───snappy
 """
-        output_text = """└───/root/path/a.txt
-    ├───/first-child
-    |   ├───first-grand-child
-    |   |   └───/deep-child
-    |   └───/second/grand-child
-    |       └───snappy
-    └───second/child
-        └───/bastard
+        output_text = """/root/path/a.txt
+├───/first-child
+|   ├───first-grand-child
+|   |   └───/deep-child
+|   └───/second/grand-child
+|       └───snappy
+└───second/child
+    └───/bastard
 """
         result = orchestrator.process_tree_output(input_text)
         self.assertEqual(result["ascii"], output_text)
@@ -54,6 +54,9 @@ class TestOrchestrator(unittest.TestCase):
 /nix/store/root
 └───/nix/store/child-a
     └───/nix/store/grandchild-a2
+/nix/store/rootb
+└───/nix/store/childb-ab
+    └───/nix/store/grandchildb-a2b
 """
         result = orchestrator.process_tree_output(input_text)
         
