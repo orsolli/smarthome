@@ -26,7 +26,7 @@ class TreeOrchestrator(TreeOrchestratorInterface):
         merged_tree = self.merger.merge_trees(tree_dicts)
         
         json_output = json.dumps(merged_tree, indent=2)
-        ascii_output = self.formatter.generate_ascii_tree(merged_tree)
+        ascii_output = self.formatter.generate_ascii_tree(merged_tree) if merged_tree else None
         
         return {
             'tree': merged_tree,
