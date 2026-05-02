@@ -31,24 +31,22 @@ node_database_insert_vulnerability_event_09d [label="80: insert_vulnerability_ev
 node_DatabaseStorage___init___8bc [label="21: __init__()" name="database_storage::DatabaseStorage.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_TreeFormatterImpl__format_children_32b [label="63: _format_children()" name="formatter::TreeFormatterImpl._format_children" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_TreeFormatterImpl__format_children_top_level_558 [label="40: _format_children_top_level()" name="formatter::TreeFormatterImpl._format_children_top_level" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_TreeFormatterImpl_generate_ascii_tree_d79 [label="6: generate_ascii_tree()" name="formatter::TreeFormatterImpl.generate_ascii_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_TreeMergerImpl_merge_trees_40c [label="122: merge_trees()" name="merger::TreeMergerImpl.merge_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_merger__dict_to_text_5ab [label="32: _dict_to_text()" name="merger::_dict_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_merger__parse_display_name_ff8 [label="79: _parse_display_name()" name="merger::_parse_display_name" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_merger__strip_tree_chars_2ad [label="105: _strip_tree_chars()" name="merger::_strip_tree_chars" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_merger__tree_to_dict_200 [label="52: _tree_to_dict()" name="merger::_tree_to_dict" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_merger__trees_to_text_bca [label="16: _trees_to_text()" name="merger::_trees_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeFormatterImpl_generate_ascii_tree_d79 [label="7: generate_ascii_tree()" name="formatter::TreeFormatterImpl.generate_ascii_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeMergerImpl_merge_trees_9aa [label="70: merge_trees()" name="merger::TreeMergerImpl.merge_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_merger__dict_to_text_5ab [label="33: _dict_to_text()" name="merger::_dict_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_merger__trees_to_text_bca [label="17: _trees_to_text()" name="merger::_trees_to_text" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_MockDerivationSource_show_derivation_529 [label="20: show_derivation()" name="mock_derivation::MockDerivationSource.show_derivation" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockVulnerabilityScanner_scan_vulnerabilities_10c [label="47: scan_vulnerabilities()" name="mock_vulnix::MockVulnerabilityScanner.scan_vulnerabilities" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockDependencyMapper_why_depends_ea8 [label="32: why_depends()" name="mock_why_depends::MockDependencyMapper.why_depends" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_TreeNormalizerImpl_normalize_d22 [label="41: normalize()" name="normalizer::TreeNormalizerImpl.normalize" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_normalizer__severity_from_cvss_86f [label="16: _severity_from_cvss()" name="normalizer::_severity_from_cvss" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_normalizer__traverse_tree_537 [label="61: _traverse_tree()" name="normalizer::_traverse_tree" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_TreeOrchestrator___init___d80 [label="9: __init__()" name="orchestrator::TreeOrchestrator.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_TreeParserImpl_parse_tree_block_aba [label="51: parse_tree_block()" name="parser::TreeParserImpl.parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
-node_TreeParserImpl_split_into_trees_c6f [label="97: split_into_trees()" name="parser::TreeParserImpl.split_into_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_parser__count_indent_e41 [label="4: _count_indent()" name="parser::_count_indent" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
-node_parser__get_node_name_99e [label="30: _get_node_name()" name="parser::_get_node_name" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeOrchestrator___init___d80 [label="8: __init__()" name="orchestrator::TreeOrchestrator.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_TreeParserImpl_parse_tree_block_0a8 [label="87: parse_tree_block()" name="parser::TreeParserImpl.parse_tree_block" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
+node_TreeParserImpl_split_into_trees_845 [label="144: split_into_trees()" name="parser::TreeParserImpl.split_into_trees" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_parser__count_indent_e41 [label="6: _count_indent()" name="parser::_count_indent" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_parser__extract_name_from_path_77b [label="32: _extract_name_from_path()" name="parser::_extract_name_from_path" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
+node_parser__get_node_name_67e [label="58: _get_node_name()" name="parser::_get_node_name" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_MockStorage___init___3fb [label="34: __init__()" name="scanner::MockStorage.__init__" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockStorage__next_id_31b [label="40: _next_id()" name="scanner::MockStorage._next_id" shape="rect" style="rounded,filled" fillcolor="#6db33f" ];
 node_MockStorage_insert_dependency_node_000 [label="63: insert_dependency_node()" name="scanner::MockStorage.insert_dependency_node" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
@@ -60,9 +58,6 @@ node_ScanPipeline_default_ef1 [label="128: default()" name="scanner::ScanPipelin
 node_ScanPipeline_run_scan_d6e [label="147: run_scan()" name="scanner::ScanPipeline.run_scan" shape="rect" style="rounded,filled" fillcolor="#cccccc" ];
 node_TestFormatter_test_formatter_deep_tree_08b [label="14: test_formatter_deep_tree()" name="test_core_TestFormatter::TestFormatter.test_formatter_deep_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestFormatter_test_formatter_simple_tree_acd [label="7: test_formatter_simple_tree()" name="test_core_TestFormatter::TestFormatter.test_formatter_simple_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_TestMerger_test_merger_empty_trees_b5b [label="33: test_merger_empty_trees()" name="test_core_TestMerger::TestMerger.test_merger_empty_trees" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_TestMerger_test_merger_multiple_trees_overlap_48e [label="15: test_merger_multiple_trees_overlap()" name="test_core_TestMerger::TestMerger.test_merger_multiple_trees_overlap" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
-node_TestMerger_test_merger_single_tree_7d9 [label="7: test_merger_single_tree()" name="test_core_TestMerger::TestMerger.test_merger_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestOrchestrator_test_orchestrator_e63 [label="8: test_orchestrator()" name="test_core_TestOrchestrator::TestOrchestrator.test_orchestrator" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestOrchestrator_test_recursive_merge_718 [label="41: test_recursive_merge()" name="test_core_TestOrchestrator::TestOrchestrator.test_recursive_merge" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestParser_test_complex_tree_164 [label="42: test_complex_tree()" name="test_core_TestParser::TestParser.test_complex_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
@@ -78,6 +73,8 @@ node_TestDatabase_test_insert_scan_returns_id_f78 [label="36: test_insert_scan_r
 node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd [label="41: test_insert_vulnerability_event_returns_id()" name="test_database::TestDatabase.test_insert_vulnerability_event_returns_id" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestDictToText_test_node_with_children_926 [label="18: test_node_with_children()" name="test_merger::TestDictToText.test_node_with_children" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestDictToText_test_simple_node_157 [label="11: test_simple_node()" name="test_merger::TestDictToText.test_simple_node" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03 [label="66: test_merger_multiple_trees_overlap()" name="test_merger::TestMergeDependencyTrees.test_merger_multiple_trees_overlap" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
+node_TestMergeDependencyTrees_test_merger_single_tree_308 [label="58: test_merger_single_tree()" name="test_merger::TestMergeDependencyTrees.test_merger_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreesToText_test_empty_list_9b0 [label="35: test_empty_list()" name="test_merger::TestTreesToText.test_empty_list" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreesToText_test_multiple_trees_1ef [label="46: test_multiple_trees()" name="test_merger::TestTreesToText.test_multiple_trees" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
 node_TestTreesToText_test_single_tree_9d9 [label="40: test_single_tree()" name="test_merger::TestTreesToText.test_single_tree" shape="rect" style="rounded,filled" fillcolor="#966F33" ];
@@ -113,16 +110,14 @@ node_TreeFormatterImpl__format_children_top_level_558 -> node_TreeFormatterImpl_
 node_TreeFormatterImpl_generate_ascii_tree_d79 -> node_TreeFormatterImpl__format_children_32b [color="#E69F00" penwidth="2"];
 node_TreeFormatterImpl_generate_ascii_tree_d79 -> node_TreeFormatterImpl__format_children_top_level_558 [color="#E69F00" penwidth="2"];
 node_merger__dict_to_text_5ab -> node_merger__dict_to_text_5ab [color="#009E73" penwidth="2"];
-node_merger__parse_display_name_ff8 -> node_merger__strip_tree_chars_2ad [color="#000000" penwidth="2"];
-node_merger__parse_display_name_ff8 -> node_merger__strip_tree_chars_2ad [color="#000000" penwidth="2"];
-node_merger__tree_to_dict_200 -> node_merger__parse_display_name_ff8 [color="#000000" penwidth="2"];
-node_merger__tree_to_dict_200 -> node_merger__tree_to_dict_200 [color="#000000" penwidth="2"];
 node_merger__trees_to_text_bca -> node_merger__dict_to_text_5ab [color="#56B4E9" penwidth="2"];
 node_TreeNormalizerImpl_normalize_d22 -> node_normalizer__traverse_tree_537 [color="#56B4E9" penwidth="2"];
 node_normalizer__traverse_tree_537 -> node_normalizer__severity_from_cvss_86f [color="#CC79A7" penwidth="2"];
 node_normalizer__traverse_tree_537 -> node_normalizer__traverse_tree_537 [color="#CC79A7" penwidth="2"];
-node_TreeParserImpl_parse_tree_block_aba -> node_parser__count_indent_e41 [color="#56B4E9" penwidth="2"];
-node_TreeParserImpl_parse_tree_block_aba -> node_parser__get_node_name_99e [color="#56B4E9" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_0a8 -> node_parser__count_indent_e41 [color="#000000" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_0a8 -> node_parser__extract_name_from_path_77b [color="#000000" penwidth="2"];
+node_TreeParserImpl_parse_tree_block_0a8 -> node_parser__get_node_name_67e [color="#000000" penwidth="2"];
+node_parser__get_node_name_67e -> node_parser__extract_name_from_path_77b [color="#D55E00" penwidth="2"];
 node_MockStorage_insert_dependency_node_000 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
 node_MockStorage_insert_scan_69c -> node_MockStorage__next_id_31b [color="#F0E442" penwidth="2"];
 node_MockStorage_insert_vulnerability_event_e4d -> node_MockStorage__next_id_31b [color="#0072B2" penwidth="2"];
@@ -132,14 +127,11 @@ node_ScanPipeline_default_ef1 -> node_MockStorage___init___3fb [color="#E69F00" 
 node_ScanPipeline_run_scan_d6e -> node_ScanPipeline__store_tree_nodes_e80 [color="#D55E00" penwidth="2"];
 node_TestFormatter_test_formatter_deep_tree_08b -> node_TreeFormatterImpl_generate_ascii_tree_d79 [color="#009E73" penwidth="2"];
 node_TestFormatter_test_formatter_simple_tree_acd -> node_TreeFormatterImpl_generate_ascii_tree_d79 [color="#0072B2" penwidth="2"];
-node_TestMerger_test_merger_empty_trees_b5b -> node_TreeMergerImpl_merge_trees_40c [color="#009E73" penwidth="2"];
-node_TestMerger_test_merger_multiple_trees_overlap_48e -> node_TreeMergerImpl_merge_trees_40c [color="#D55E00" penwidth="2"];
-node_TestMerger_test_merger_single_tree_7d9 -> node_TreeMergerImpl_merge_trees_40c [color="#E69F00" penwidth="2"];
 node_TestOrchestrator_test_orchestrator_e63 -> node_TreeOrchestrator___init___d80 [color="#009E73" penwidth="2"];
 node_TestOrchestrator_test_recursive_merge_718 -> node_TreeOrchestrator___init___d80 [color="#000000" penwidth="2"];
-node_TestParser_test_complex_tree_164 -> node_TreeParserImpl_parse_tree_block_aba [color="#F0E442" penwidth="2"];
-node_TestParser_test_parse_tree_block_487 -> node_TreeParserImpl_parse_tree_block_aba [color="#CC79A7" penwidth="2"];
-node_TestParser_test_parser_split_logic_294 -> node_TreeParserImpl_split_into_trees_c6f [color="#F0E442" penwidth="2"];
+node_TestParser_test_complex_tree_164 -> node_TreeParserImpl_parse_tree_block_0a8 [color="#F0E442" penwidth="2"];
+node_TestParser_test_parse_tree_block_487 -> node_TreeParserImpl_parse_tree_block_0a8 [color="#CC79A7" penwidth="2"];
+node_TestParser_test_parser_split_logic_294 -> node_TreeParserImpl_split_into_trees_845 [color="#F0E442" penwidth="2"];
 node_TestDatabase_setUp_f4a -> node_database_init_db_6e2 [color="#56B4E9" penwidth="2"];
 node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_get_dependency_tree_for_scan_426 [color="#E69F00" penwidth="2"];
 node_TestDatabase_test_get_dependency_tree_for_scan_5e9 -> node_database_insert_dependency_node_4a2 [color="#E69F00" penwidth="2"];
@@ -160,6 +152,8 @@ node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd -> node_databas
 node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd -> node_database_insert_vulnerability_event_09d [color="#0072B2" penwidth="2"];
 node_TestDictToText_test_node_with_children_926 -> node_merger__dict_to_text_5ab [color="#D55E00" penwidth="2"];
 node_TestDictToText_test_simple_node_157 -> node_merger__dict_to_text_5ab [color="#CC79A7" penwidth="2"];
+node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03 -> node_TreeMergerImpl_merge_trees_9aa [color="#009E73" penwidth="2"];
+node_TestMergeDependencyTrees_test_merger_single_tree_308 -> node_TreeMergerImpl_merge_trees_9aa [color="#000000" penwidth="2"];
 node_TestTreesToText_test_empty_list_9b0 -> node_merger__trees_to_text_bca [color="#000000" penwidth="2"];
 node_TestTreesToText_test_multiple_trees_1ef -> node_merger__trees_to_text_bca [color="#CC79A7" penwidth="2"];
 node_TestTreesToText_test_single_tree_9d9 -> node_merger__trees_to_text_bca [color="#E69F00" penwidth="2"];
@@ -195,8 +189,8 @@ node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> no
 node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_MockStorage__next_id_31b [color="#000000" penwidth="2"];
 node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_ScanPipeline___init___136 [color="#000000" penwidth="2"];
 node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 -> node_ScanPipeline_run_scan_d6e [color="#000000" penwidth="2"];
-node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 -> node_TreeMergerImpl_merge_trees_40c [color="#E69F00" penwidth="2"];
-node_TestTreeMergerImpl_test_merge_single_tree_047 -> node_TreeMergerImpl_merge_trees_40c [color="#CC79A7" penwidth="2"];
+node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 -> node_TreeMergerImpl_merge_trees_9aa [color="#E69F00" penwidth="2"];
+node_TestTreeMergerImpl_test_merge_single_tree_047 -> node_TreeMergerImpl_merge_trees_9aa [color="#CC79A7" penwidth="2"];
 node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 -> node_TreeNormalizerImpl_normalize_d22 [color="#0072B2" penwidth="2"];
 node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 -> node_TreeNormalizerImpl_normalize_d22 [color="#CC79A7" penwidth="2"];
 node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 -> node_TreeNormalizerImpl_normalize_d22 [color="#000000" penwidth="2"];
@@ -249,13 +243,13 @@ subgraph cluster__formatter_580 {
     };
 };
 subgraph cluster__merger_f2b {
-    node_merger__trees_to_text_bca node_merger__dict_to_text_5ab node_merger__tree_to_dict_200 node_merger__parse_display_name_ff8 node_merger__strip_tree_chars_2ad;
+    node_merger__trees_to_text_bca node_merger__dict_to_text_5ab;
     label="File: merger";
     name="merger";
     style="filled";
     graph[style=dotted];
     subgraph cluster_merger_TreeMergerImpl_a8e {
-        node_TreeMergerImpl_merge_trees_40c;
+        node_TreeMergerImpl_merge_trees_9aa;
         label="Class: TreeMergerImpl";
         name="TreeMergerImpl";
         style="filled";
@@ -329,13 +323,13 @@ subgraph cluster__orchestrator_efc {
     };
 };
 subgraph cluster__parser_77e {
-    node_parser__count_indent_e41 node_parser__get_node_name_99e;
+    node_parser__count_indent_e41 node_parser__extract_name_from_path_77b node_parser__get_node_name_67e;
     label="File: parser";
     name="parser";
     style="filled";
     graph[style=dotted];
     subgraph cluster_parser_TreeParserImpl_48c {
-        node_TreeParserImpl_parse_tree_block_aba node_TreeParserImpl_split_into_trees_c6f;
+        node_TreeParserImpl_parse_tree_block_0a8 node_TreeParserImpl_split_into_trees_845;
         label="Class: TreeParserImpl";
         name="TreeParserImpl";
         style="filled";
@@ -371,19 +365,6 @@ subgraph cluster__test_core_TestFormatter_eba {
         node_TestFormatter_test_formatter_simple_tree_acd node_TestFormatter_test_formatter_deep_tree_08b;
         label="Class: TestFormatter";
         name="TestFormatter";
-        style="filled";
-        graph[style=dotted];
-    };
-};
-subgraph cluster__test_core_TestMerger_9e6 {
-    label="File: test_core_TestMerger";
-    name="test_core_TestMerger";
-    style="filled";
-    graph[style=dotted];
-    subgraph cluster_test_core_TestMerger_TestMerger_668 {
-        node_TestMerger_test_merger_single_tree_7d9 node_TestMerger_test_merger_multiple_trees_overlap_48e node_TestMerger_test_merger_empty_trees_b5b;
-        label="Class: TestMerger";
-        name="TestMerger";
         style="filled";
         graph[style=dotted];
     };
@@ -443,6 +424,13 @@ subgraph cluster__test_merger_467 {
         node_TestTreesToText_test_empty_list_9b0 node_TestTreesToText_test_single_tree_9d9 node_TestTreesToText_test_multiple_trees_1ef;
         label="Class: TestTreesToText";
         name="TestTreesToText";
+        style="filled";
+        graph[style=dotted];
+    };
+    subgraph cluster_test_merger_TestMergeDependencyTrees_ff6 {
+        node_TestMergeDependencyTrees_test_merger_single_tree_308 node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03;
+        label="Class: TestMergeDependencyTrees";
+        name="TestMergeDependencyTrees";
         style="filled";
         graph[style=dotted];
     };

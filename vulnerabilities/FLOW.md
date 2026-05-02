@@ -39,24 +39,21 @@ graph LR
             direction LR
             node_TreeFormatterImpl__format_children_32b["63: _format_children()"]:::filled
             node_TreeFormatterImpl__format_children_top_level_558["40: _format_children_top_level()"]:::filled
-            node_TreeFormatterImpl_generate_ascii_tree_d79["6: generate_ascii_tree()"]:::filled
+            node_TreeFormatterImpl_generate_ascii_tree_d79["7: generate_ascii_tree()"]:::filled
         end
         node_TreeFormatterImpl__format_children_32b["63: _format_children()"]:::filled
         node_TreeFormatterImpl__format_children_top_level_558["40: _format_children_top_level()"]:::filled
-        node_TreeFormatterImpl_generate_ascii_tree_d79["6: generate_ascii_tree()"]:::filled
+        node_TreeFormatterImpl_generate_ascii_tree_d79["7: generate_ascii_tree()"]:::filled
     end
     subgraph File: merger
         direction LR
         subgraph Class: TreeMergerImpl
             direction LR
-            node_TreeMergerImpl_merge_trees_40c["122: merge_trees()"]:::leaf
+            node_TreeMergerImpl_merge_trees_9aa["70: merge_trees()"]:::leaf
         end
-        node_TreeMergerImpl_merge_trees_40c["122: merge_trees()"]:::leaf
-        node_merger__dict_to_text_5ab["32: _dict_to_text()"]:::filled
-        node_merger__parse_display_name_ff8["79: _parse_display_name()"]:::filled
-        node_merger__strip_tree_chars_2ad["105: _strip_tree_chars()"]:::leaf
-        node_merger__tree_to_dict_200["52: _tree_to_dict()"]:::filled
-        node_merger__trees_to_text_bca["16: _trees_to_text()"]:::filled
+        node_TreeMergerImpl_merge_trees_9aa["70: merge_trees()"]:::leaf
+        node_merger__dict_to_text_5ab["33: _dict_to_text()"]:::filled
+        node_merger__trees_to_text_bca["17: _trees_to_text()"]:::filled
     end
     subgraph File: mock_derivation
         direction LR
@@ -96,21 +93,22 @@ graph LR
         direction LR
         subgraph Class: TreeOrchestrator
             direction LR
-            node_TreeOrchestrator___init___d80["9: __init__()"]:::leaf
+            node_TreeOrchestrator___init___d80["8: __init__()"]:::leaf
         end
-        node_TreeOrchestrator___init___d80["9: __init__()"]:::leaf
+        node_TreeOrchestrator___init___d80["8: __init__()"]:::leaf
     end
     subgraph File: parser
         direction LR
         subgraph Class: TreeParserImpl
             direction LR
-            node_TreeParserImpl_parse_tree_block_aba["51: parse_tree_block()"]:::filled
-            node_TreeParserImpl_split_into_trees_c6f["97: split_into_trees()"]:::leaf
+            node_TreeParserImpl_parse_tree_block_0a8["87: parse_tree_block()"]:::filled
+            node_TreeParserImpl_split_into_trees_845["144: split_into_trees()"]:::leaf
         end
-        node_TreeParserImpl_parse_tree_block_aba["51: parse_tree_block()"]:::filled
-        node_TreeParserImpl_split_into_trees_c6f["97: split_into_trees()"]:::leaf
-        node_parser__count_indent_e41["4: _count_indent()"]:::leaf
-        node_parser__get_node_name_99e["30: _get_node_name()"]:::leaf
+        node_TreeParserImpl_parse_tree_block_0a8["87: parse_tree_block()"]:::filled
+        node_TreeParserImpl_split_into_trees_845["144: split_into_trees()"]:::leaf
+        node_parser__count_indent_e41["6: _count_indent()"]:::leaf
+        node_parser__extract_name_from_path_77b["32: _extract_name_from_path()"]:::leaf
+        node_parser__get_node_name_67e["58: _get_node_name()"]:::filled
     end
     subgraph File: scanner
         direction LR
@@ -148,18 +146,6 @@ graph LR
         end
         node_TestFormatter_test_formatter_deep_tree_08b["14: test_formatter_deep_tree()"]:::trunk
         node_TestFormatter_test_formatter_simple_tree_acd["7: test_formatter_simple_tree()"]:::trunk
-    end
-    subgraph File: test_core_TestMerger
-        direction LR
-        subgraph Class: TestMerger
-            direction LR
-            node_TestMerger_test_merger_empty_trees_b5b["33: test_merger_empty_trees()"]:::trunk
-            node_TestMerger_test_merger_multiple_trees_overlap_48e["15: test_merger_multiple_trees_overlap()"]:::trunk
-            node_TestMerger_test_merger_single_tree_7d9["7: test_merger_single_tree()"]:::trunk
-        end
-        node_TestMerger_test_merger_empty_trees_b5b["33: test_merger_empty_trees()"]:::trunk
-        node_TestMerger_test_merger_multiple_trees_overlap_48e["15: test_merger_multiple_trees_overlap()"]:::trunk
-        node_TestMerger_test_merger_single_tree_7d9["7: test_merger_single_tree()"]:::trunk
     end
     subgraph File: test_core_TestOrchestrator
         direction LR
@@ -218,8 +204,15 @@ graph LR
             node_TestTreesToText_test_multiple_trees_1ef["46: test_multiple_trees()"]:::trunk
             node_TestTreesToText_test_single_tree_9d9["40: test_single_tree()"]:::trunk
         end
+        subgraph Class: TestMergeDependencyTrees
+            direction LR
+            node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03["66: test_merger_multiple_trees_overlap()"]:::trunk
+            node_TestMergeDependencyTrees_test_merger_single_tree_308["58: test_merger_single_tree()"]:::trunk
+        end
         node_TestDictToText_test_node_with_children_926["18: test_node_with_children()"]:::trunk
         node_TestDictToText_test_simple_node_157["11: test_simple_node()"]:::trunk
+        node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03["66: test_merger_multiple_trees_overlap()"]:::trunk
+        node_TestMergeDependencyTrees_test_merger_single_tree_308["58: test_merger_single_tree()"]:::trunk
         node_TestTreesToText_test_empty_list_9b0["35: test_empty_list()"]:::trunk
         node_TestTreesToText_test_multiple_trees_1ef["46: test_multiple_trees()"]:::trunk
         node_TestTreesToText_test_single_tree_9d9["40: test_single_tree()"]:::trunk
@@ -309,16 +302,14 @@ graph LR
     node_TreeFormatterImpl_generate_ascii_tree_d79 --> node_TreeFormatterImpl__format_children_32b
     node_TreeFormatterImpl_generate_ascii_tree_d79 --> node_TreeFormatterImpl__format_children_top_level_558
     node_merger__dict_to_text_5ab --> node_merger__dict_to_text_5ab
-    node_merger__parse_display_name_ff8 --> node_merger__strip_tree_chars_2ad
-    node_merger__parse_display_name_ff8 --> node_merger__strip_tree_chars_2ad
-    node_merger__tree_to_dict_200 --> node_merger__parse_display_name_ff8
-    node_merger__tree_to_dict_200 --> node_merger__tree_to_dict_200
     node_merger__trees_to_text_bca --> node_merger__dict_to_text_5ab
     node_TreeNormalizerImpl_normalize_d22 --> node_normalizer__traverse_tree_537
     node_normalizer__traverse_tree_537 --> node_normalizer__severity_from_cvss_86f
     node_normalizer__traverse_tree_537 --> node_normalizer__traverse_tree_537
-    node_TreeParserImpl_parse_tree_block_aba --> node_parser__count_indent_e41
-    node_TreeParserImpl_parse_tree_block_aba --> node_parser__get_node_name_99e
+    node_TreeParserImpl_parse_tree_block_0a8 --> node_parser__count_indent_e41
+    node_TreeParserImpl_parse_tree_block_0a8 --> node_parser__extract_name_from_path_77b
+    node_TreeParserImpl_parse_tree_block_0a8 --> node_parser__get_node_name_67e
+    node_parser__get_node_name_67e --> node_parser__extract_name_from_path_77b
     node_MockStorage_insert_dependency_node_000 --> node_MockStorage__next_id_31b
     node_MockStorage_insert_scan_69c --> node_MockStorage__next_id_31b
     node_MockStorage_insert_vulnerability_event_e4d --> node_MockStorage__next_id_31b
@@ -328,14 +319,11 @@ graph LR
     node_ScanPipeline_run_scan_d6e --> node_ScanPipeline__store_tree_nodes_e80
     node_TestFormatter_test_formatter_deep_tree_08b --> node_TreeFormatterImpl_generate_ascii_tree_d79
     node_TestFormatter_test_formatter_simple_tree_acd --> node_TreeFormatterImpl_generate_ascii_tree_d79
-    node_TestMerger_test_merger_empty_trees_b5b --> node_TreeMergerImpl_merge_trees_40c
-    node_TestMerger_test_merger_multiple_trees_overlap_48e --> node_TreeMergerImpl_merge_trees_40c
-    node_TestMerger_test_merger_single_tree_7d9 --> node_TreeMergerImpl_merge_trees_40c
     node_TestOrchestrator_test_orchestrator_e63 --> node_TreeOrchestrator___init___d80
     node_TestOrchestrator_test_recursive_merge_718 --> node_TreeOrchestrator___init___d80
-    node_TestParser_test_complex_tree_164 --> node_TreeParserImpl_parse_tree_block_aba
-    node_TestParser_test_parse_tree_block_487 --> node_TreeParserImpl_parse_tree_block_aba
-    node_TestParser_test_parser_split_logic_294 --> node_TreeParserImpl_split_into_trees_c6f
+    node_TestParser_test_complex_tree_164 --> node_TreeParserImpl_parse_tree_block_0a8
+    node_TestParser_test_parse_tree_block_487 --> node_TreeParserImpl_parse_tree_block_0a8
+    node_TestParser_test_parser_split_logic_294 --> node_TreeParserImpl_split_into_trees_845
     node_TestDatabase_setUp_f4a --> node_database_init_db_6e2
     node_TestDatabase_test_get_dependency_tree_for_scan_5e9 --> node_database_get_dependency_tree_for_scan_426
     node_TestDatabase_test_get_dependency_tree_for_scan_5e9 --> node_database_insert_dependency_node_4a2
@@ -356,6 +344,8 @@ graph LR
     node_TestDatabase_test_insert_vulnerability_event_returns_id_5bd --> node_database_insert_vulnerability_event_09d
     node_TestDictToText_test_node_with_children_926 --> node_merger__dict_to_text_5ab
     node_TestDictToText_test_simple_node_157 --> node_merger__dict_to_text_5ab
+    node_TestMergeDependencyTrees_test_merger_multiple_trees_overlap_f03 --> node_TreeMergerImpl_merge_trees_9aa
+    node_TestMergeDependencyTrees_test_merger_single_tree_308 --> node_TreeMergerImpl_merge_trees_9aa
     node_TestTreesToText_test_empty_list_9b0 --> node_merger__trees_to_text_bca
     node_TestTreesToText_test_multiple_trees_1ef --> node_merger__trees_to_text_bca
     node_TestTreesToText_test_single_tree_9d9 --> node_merger__trees_to_text_bca
@@ -391,8 +381,8 @@ graph LR
     node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 --> node_MockStorage__next_id_31b
     node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 --> node_ScanPipeline___init___136
     node_TestScanPipelineWithCustomStages_test_run_scan_with_custom_stages_7f0 --> node_ScanPipeline_run_scan_d6e
-    node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 --> node_TreeMergerImpl_merge_trees_40c
-    node_TestTreeMergerImpl_test_merge_single_tree_047 --> node_TreeMergerImpl_merge_trees_40c
+    node_TestTreeMergerImpl_test_merge_empty_returns_empty_481 --> node_TreeMergerImpl_merge_trees_9aa
+    node_TestTreeMergerImpl_test_merge_single_tree_047 --> node_TreeMergerImpl_merge_trees_9aa
     node_TestTreeNormalizerImpl_test_normalize_empty_tree_115 --> node_TreeNormalizerImpl_normalize_d22
     node_TestTreeNormalizerImpl_test_normalize_with_custom_lookup_847 --> node_TreeNormalizerImpl_normalize_d22
     node_TestTreeNormalizerImpl_test_normalize_with_mock_lookup_9f8 --> node_TreeNormalizerImpl_normalize_d22
@@ -412,94 +402,91 @@ graph LR
     linkStyle 10 stroke:#E69F00
     linkStyle 11 stroke:#E69F00
     linkStyle 12 stroke:#009E73
-    linkStyle 13 stroke:#000000
-    linkStyle 14 stroke:#000000
-    linkStyle 15 stroke:#000000
-    linkStyle 16 stroke:#000000
-    linkStyle 17 stroke:#56B4E9
-    linkStyle 18 stroke:#56B4E9
-    linkStyle 19 stroke:#CC79A7
-    linkStyle 20 stroke:#CC79A7
-    linkStyle 21 stroke:#56B4E9
-    linkStyle 22 stroke:#56B4E9
-    linkStyle 23 stroke:#000000
-    linkStyle 24 stroke:#F0E442
-    linkStyle 25 stroke:#0072B2
-    linkStyle 26 stroke:#000000
-    linkStyle 27 stroke:#E69F00
-    linkStyle 28 stroke:#E69F00
-    linkStyle 29 stroke:#D55E00
+    linkStyle 13 stroke:#56B4E9
+    linkStyle 14 stroke:#56B4E9
+    linkStyle 15 stroke:#CC79A7
+    linkStyle 16 stroke:#CC79A7
+    linkStyle 17 stroke:#000000
+    linkStyle 18 stroke:#000000
+    linkStyle 19 stroke:#000000
+    linkStyle 20 stroke:#D55E00
+    linkStyle 21 stroke:#000000
+    linkStyle 22 stroke:#F0E442
+    linkStyle 23 stroke:#0072B2
+    linkStyle 24 stroke:#000000
+    linkStyle 25 stroke:#E69F00
+    linkStyle 26 stroke:#E69F00
+    linkStyle 27 stroke:#D55E00
+    linkStyle 28 stroke:#009E73
+    linkStyle 29 stroke:#0072B2
     linkStyle 30 stroke:#009E73
-    linkStyle 31 stroke:#0072B2
-    linkStyle 32 stroke:#009E73
-    linkStyle 33 stroke:#D55E00
-    linkStyle 34 stroke:#E69F00
-    linkStyle 35 stroke:#009E73
-    linkStyle 36 stroke:#000000
-    linkStyle 37 stroke:#F0E442
-    linkStyle 38 stroke:#CC79A7
+    linkStyle 31 stroke:#000000
+    linkStyle 32 stroke:#F0E442
+    linkStyle 33 stroke:#CC79A7
+    linkStyle 34 stroke:#F0E442
+    linkStyle 35 stroke:#56B4E9
+    linkStyle 36 stroke:#E69F00
+    linkStyle 37 stroke:#E69F00
+    linkStyle 38 stroke:#E69F00
     linkStyle 39 stroke:#F0E442
-    linkStyle 40 stroke:#56B4E9
-    linkStyle 41 stroke:#E69F00
-    linkStyle 42 stroke:#E69F00
-    linkStyle 43 stroke:#E69F00
-    linkStyle 44 stroke:#F0E442
-    linkStyle 45 stroke:#F0E442
-    linkStyle 46 stroke:#F0E442
-    linkStyle 47 stroke:#009E73
-    linkStyle 48 stroke:#009E73
-    linkStyle 49 stroke:#009E73
-    linkStyle 50 stroke:#E69F00
-    linkStyle 51 stroke:#E69F00
-    linkStyle 52 stroke:#E69F00
-    linkStyle 53 stroke:#F0E442
-    linkStyle 54 stroke:#F0E442
-    linkStyle 55 stroke:#000000
-    linkStyle 56 stroke:#0072B2
-    linkStyle 57 stroke:#0072B2
-    linkStyle 58 stroke:#D55E00
-    linkStyle 59 stroke:#CC79A7
-    linkStyle 60 stroke:#000000
-    linkStyle 61 stroke:#CC79A7
+    linkStyle 40 stroke:#F0E442
+    linkStyle 41 stroke:#F0E442
+    linkStyle 42 stroke:#009E73
+    linkStyle 43 stroke:#009E73
+    linkStyle 44 stroke:#009E73
+    linkStyle 45 stroke:#E69F00
+    linkStyle 46 stroke:#E69F00
+    linkStyle 47 stroke:#E69F00
+    linkStyle 48 stroke:#F0E442
+    linkStyle 49 stroke:#F0E442
+    linkStyle 50 stroke:#000000
+    linkStyle 51 stroke:#0072B2
+    linkStyle 52 stroke:#0072B2
+    linkStyle 53 stroke:#D55E00
+    linkStyle 54 stroke:#CC79A7
+    linkStyle 55 stroke:#009E73
+    linkStyle 56 stroke:#000000
+    linkStyle 57 stroke:#000000
+    linkStyle 58 stroke:#CC79A7
+    linkStyle 59 stroke:#E69F00
+    linkStyle 60 stroke:#D55E00
+    linkStyle 61 stroke:#E69F00
     linkStyle 62 stroke:#E69F00
-    linkStyle 63 stroke:#D55E00
-    linkStyle 64 stroke:#E69F00
-    linkStyle 65 stroke:#E69F00
-    linkStyle 66 stroke:#E69F00
-    linkStyle 67 stroke:#0072B2
-    linkStyle 68 stroke:#0072B2
-    linkStyle 69 stroke:#0072B2
-    linkStyle 70 stroke:#D55E00
-    linkStyle 71 stroke:#D55E00
-    linkStyle 72 stroke:#F0E442
-    linkStyle 73 stroke:#F0E442
-    linkStyle 74 stroke:#F0E442
+    linkStyle 63 stroke:#E69F00
+    linkStyle 64 stroke:#0072B2
+    linkStyle 65 stroke:#0072B2
+    linkStyle 66 stroke:#0072B2
+    linkStyle 67 stroke:#D55E00
+    linkStyle 68 stroke:#D55E00
+    linkStyle 69 stroke:#F0E442
+    linkStyle 70 stroke:#F0E442
+    linkStyle 71 stroke:#F0E442
+    linkStyle 72 stroke:#0072B2
+    linkStyle 73 stroke:#CC79A7
+    linkStyle 74 stroke:#0072B2
     linkStyle 75 stroke:#0072B2
-    linkStyle 76 stroke:#CC79A7
+    linkStyle 76 stroke:#0072B2
     linkStyle 77 stroke:#0072B2
     linkStyle 78 stroke:#0072B2
-    linkStyle 79 stroke:#0072B2
-    linkStyle 80 stroke:#0072B2
-    linkStyle 81 stroke:#0072B2
-    linkStyle 82 stroke:#56B4E9
-    linkStyle 83 stroke:#56B4E9
-    linkStyle 84 stroke:#56B4E9
+    linkStyle 79 stroke:#56B4E9
+    linkStyle 80 stroke:#56B4E9
+    linkStyle 81 stroke:#56B4E9
+    linkStyle 82 stroke:#F0E442
+    linkStyle 83 stroke:#F0E442
+    linkStyle 84 stroke:#F0E442
     linkStyle 85 stroke:#F0E442
-    linkStyle 86 stroke:#F0E442
-    linkStyle 87 stroke:#F0E442
-    linkStyle 88 stroke:#F0E442
-    linkStyle 89 stroke:#CC79A7
+    linkStyle 86 stroke:#CC79A7
+    linkStyle 87 stroke:#000000
+    linkStyle 88 stroke:#000000
+    linkStyle 89 stroke:#000000
     linkStyle 90 stroke:#000000
     linkStyle 91 stroke:#000000
-    linkStyle 92 stroke:#000000
-    linkStyle 93 stroke:#000000
-    linkStyle 94 stroke:#000000
-    linkStyle 95 stroke:#E69F00
-    linkStyle 96 stroke:#CC79A7
-    linkStyle 97 stroke:#0072B2
-    linkStyle 98 stroke:#CC79A7
-    linkStyle 99 stroke:#000000
-    linkStyle 100 stroke:#000000
+    linkStyle 92 stroke:#E69F00
+    linkStyle 93 stroke:#CC79A7
+    linkStyle 94 stroke:#0072B2
+    linkStyle 95 stroke:#CC79A7
+    linkStyle 96 stroke:#000000
+    linkStyle 97 stroke:#000000
 
     %% Node styles
     classDef filled fill:#555555,stroke:#000000,stroke-width:2px;
