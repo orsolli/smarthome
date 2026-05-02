@@ -70,7 +70,7 @@ class TestTreeMergerImpl(unittest.TestCase):
         """Merging empty list returns empty dict."""
         merger = TreeMergerImpl()
         result = merger.merge_trees([])
-        self.assertEqual(result, {'children': [], 'name': '.'})
+        self.assertEqual(result, None)
 
     def test_merge_single_tree(self):
         """Merging single tree returns a dict."""

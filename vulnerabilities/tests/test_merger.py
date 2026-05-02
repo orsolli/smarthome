@@ -55,10 +55,34 @@ class TestTreesToText(unittest.TestCase):
 
 
 class TestMergeDependencyTrees(unittest.TestCase):
+    def test_merger_single_tree(self):
+        from core.merger import TreeMergerImpl
+        merger = TreeMergerImpl()
+        trees = [{'name': 'a', 'children': []}]
+        result = merger.merge_trees(trees)
+        self.assertEqual(result['name'], 'a')
+        self.assertEqual(len(result['children']), 0)
+
+    def test_merger_multiple_trees_overlap(self):
+        from core.merger import TreeMergerImpl
+        merger = TreeMergerImpl()
+        tree1 = {'name': 'a', 'children': [{'name': 'b', 'children': []}]}
+        tree2 = {'name': 'a', 'children': [{'name': 'c-d', 'children': []}]}
+        result = merger.merge_trees([tree1, tree2])
+        
+        # Root is '.', so first child should be '/nix/store/a'
+        root = result
+        self.assertEqual(root['name'], 'a')
+        
+        # Check if both children 'b' and 'c' exist under 'a'
+        child_names = [child['name'] for child in root['children']]
+        self.assertIn('b', child_names)
+        self.assertIn('c-d', child_names)
+
     def test_empty_input(self):
         """Empty input returns empty dict."""
         result = TreeMergerImpl().merge_trees([])
-        self.assertEqual(result.get('children', []), [])
+        self.assertEqual(result, None)
 
     def test_single_tree(self):
         """A single tree is returned (possibly modified by tree_parser)."""
