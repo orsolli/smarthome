@@ -60,9 +60,9 @@ class TestOrchestrator(unittest.TestCase):
         # Find child-a in the results
         child_a = None
         for root in result['tree']['children']:
-            if root['name'] == '/nix/store/root':
+            if root['name'] == 'root':
                 child = root['children'][0]
-                if child['name'] == '/nix/store/child-a':
+                if child['name'] == 'child-a':
                     child_a = child
                     break
         
@@ -70,8 +70,8 @@ class TestOrchestrator(unittest.TestCase):
         
         # Check if both grandchildren exist
         grandchild_names = [gc['name'] for gc in child_a['children']]
-        self.assertIn('/nix/store/grandchild-a1', grandchild_names)
-        self.assertIn('/nix/store/grandchild-a2', grandchild_names)
+        self.assertIn('grandchild-a1', grandchild_names)
+        self.assertIn('grandchild-a2', grandchild_names)
         self.assertEqual(len(grandchild_names), 2)
 
 if __name__ == "__main__":

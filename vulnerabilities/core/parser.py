@@ -29,13 +29,38 @@ def _count_indent(line: str) -> int:
     return count
 
 
+def _extract_name_from_path(path: str) -> str:
+    """Extract name-version from a derivation path.
+    
+    For '/nix/store/xyz-root-1.0.drv' returns 'root-1.0'.
+    For '/nix/store/child-a-1.0.drv' returns 'a-1.0'.
+    For '/nix/store/root-1.0.drv' returns 'root-1.0'.
+    For '/nix/store/grandchild1-a1-1.0.drv' returns 'a1-1.0'.
+    """
+    # Get the filename component
+    if '/nix/store/' in path:
+        filename = path.rsplit('/nix/store/', 1)[-1]
+    else:
+        filename = path
+    
+    # Strip .drv extension
+    if filename.endswith('.drv'):
+        filename = filename[:-4]
+    
+    # Take last two -separated components and join with -
+    parts = filename.rsplit('-', 2)
+    if len(parts) >= 2:
+        return '-'.join(parts[-2:])
+    return filename
+
+
 def _get_node_name(line: str) -> str:
     """Get the node name from a tree line."""
     line = line.strip()
     if not line:
         return ""
     
-    # Find where the name starts (after tree symbols and spaces)
+    # Find where the path starts (after tree symbols and spaces)
     i = 0
     while i < len(line):
         if line[i] == '│':
@@ -47,7 +72,11 @@ def _get_node_name(line: str) -> str:
         else:
             break
     
-    return line[i:].strip()
+    raw_path = line[i:].strip()
+    # Only extract name from nix store paths; preserve other paths as-is
+    if '/nix/store/' in raw_path:
+        return _extract_name_from_path(raw_path)
+    return raw_path
 
 
 class TreeParserImpl(TreeParserInterface):
@@ -59,10 +88,7 @@ class TreeParserImpl(TreeParserInterface):
         
         # Extract just the name from the root path (e.g., "root-1.0" from "/nix/store/xyz-root-1.0.drv")
         root_path = lines[0].strip()
-        if '/nix/store/' in root_path:
-            root_name = root_path.rsplit('/nix/store/', 1)[-1]
-        else:
-            root_name = root_path
+        root_name = _extract_name_from_path(root_path)
         
         root: TreeNodeDict = {
             'name': root_name,
