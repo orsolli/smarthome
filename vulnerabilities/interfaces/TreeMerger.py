@@ -5,5 +5,5 @@ from interfaces.TreeNodeDict import TreeNodeDict
 
 class TreeMergerInterface(ABC):
     @abstractmethod
-    def merge_trees(self, trees: List[TreeNodeDict]) -> TreeNodeDict:
+    def merge_trees(self, trees: List[TreeNodeDict]) -> TreeNodeDict | None:
         pass

@@ -67,7 +67,7 @@ def _strip_tree_chars(s: str) -> str:
 class TreeMergerImpl(TreeMergerInterface):
     """Implementation of TreeMergerInterface using tree_parser."""
 
-    def merge_trees(self, trees: list[TreeNodeDict]) -> TreeNodeDict:
+    def merge_trees(self, trees: list[TreeNodeDict]) -> TreeNodeDict | None:
         """Merge multiple dependency trees into one.
 
         Args:

@@ -4,7 +4,7 @@ from interfaces.TreeNodeDict import TreeNodeDict
 
 class TreeParserInterface(ABC):
     @abstractmethod
-    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict:
+    def parse_tree_block(self, lines: List[str]) -> TreeNodeDict | None:
         pass
 
     @abstractmethod

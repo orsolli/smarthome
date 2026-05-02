@@ -20,7 +20,8 @@ class TreeOrchestrator(TreeOrchestratorInterface):
         for tree_lines in tree_blocks:
             if tree_lines:
                 tree = self.parser.parse_tree_block(tree_lines)
-                tree_dicts.append(tree)
+                if tree:
+                    tree_dicts.append(tree)
         
         merged_tree = self.merger.merge_trees(tree_dicts)
         
