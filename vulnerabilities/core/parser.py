@@ -29,13 +29,12 @@ def _count_indent(line: str) -> int:
     return count
 
 
-def _extract_name_from_path(path: str) -> str:
-    """Extract name-version from a derivation path.
+def _extract_name_from_path(path: str) -> tuple[str, str]:
+    """Extract name-version and package name from a derivation path.
     
-    For '/nix/store/xyz-root-1.0.drv' returns 'root-1.0'.
-    For '/nix/store/child-a-1.0.drv' returns 'a-1.0'.
-    For '/nix/store/root-1.0.drv' returns 'root-1.0'.
-    For '/nix/store/grandchild1-a1-1.0.drv' returns 'a1-1.0'.
+    For '/nix/store/xyz-root-1.0.drv' returns ('root-1.0', 'root').
+    For '/nix/store/child-a-1.0.drv' returns ('a-1.0', 'a').
+    For non-nix paths returns (path, '').
     """
     # Get the filename component
     if '/nix/store/' in path:
@@ -44,21 +43,26 @@ def _extract_name_from_path(path: str) -> str:
         filename = path
     
     # Strip .drv extension
-    if filename.endswith('.drv'):
-        filename = filename[:-4]
+    name = filename
+    if name.endswith('.drv'):
+        name = name[:-4]
     
     # Take last two -separated components and join with -
-    parts = filename.rsplit('-', 2)
+    parts = name.rsplit('-', 2)
     if len(parts) >= 2:
-        return '-'.join(parts[-2:])
-    return filename
+        name = '-'.join(parts[-2:])
+    
+    return name, '-'.join(parts[1:-1])
 
 
-def _get_node_name(line: str) -> str:
-    """Get the node name from a tree line."""
+def _get_node_name(line: str) -> tuple[str, str, str]:
+    """Get the node names and drv_path from a tree line.
+    
+    Returns a tuple of (name, pname, drv_path).
+    """
     line = line.strip()
     if not line:
-        return ""
+        return "", "", ""
     
     # Find where the path starts (after tree symbols and spaces)
     i = 0
@@ -75,8 +79,8 @@ def _get_node_name(line: str) -> str:
     raw_path = line[i:].strip()
     # Only extract name from nix store paths; preserve other paths as-is
     if '/nix/store/' in raw_path:
-        return _extract_name_from_path(raw_path)
-    return raw_path
+        return *_extract_name_from_path(raw_path), raw_path
+    return raw_path, "", raw_path
 
 
 class TreeParserImpl(TreeParserInterface):
@@ -84,14 +88,16 @@ class TreeParserImpl(TreeParserInterface):
         lines = [line_ for line_ in lines if line_.strip()]
         
         if not lines:
-            return {'name': '.', 'children': []}
+            return
         
         # Extract just the name from the root path (e.g., "root-1.0" from "/nix/store/xyz-root-1.0.drv")
         root_path = lines[0].strip()
-        root_name = _extract_name_from_path(root_path)
+        root_name, root_pname = _extract_name_from_path(root_path)
         
         root: TreeNodeDict = {
             'name': root_name,
+            'pname': root_pname,
+            'drv_path': root_path,
             'children': []
         }
         
@@ -99,14 +105,16 @@ class TreeParserImpl(TreeParserInterface):
         
         for line in lines[1:]:
             depth = _count_indent(line)
-            node_name = _get_node_name(line)
+            name, pname, drv_path = _get_node_name(line)
             
-            if depth == -1 or not node_name:
+            if depth == -1 or not name:
                 continue
             
             if depth == 0:
                 child: TreeNodeDict = {
-                    'name': node_name,
+                    'name': name,
+                    'pname': pname,
+                    'drv_path': drv_path,
                     'children': []
                 }
                 root['children'].append(child)
@@ -118,7 +126,9 @@ class TreeParserImpl(TreeParserInterface):
                         parent['children'] = []
                     
                     node: TreeNodeDict = {
-                        'name': node_name,
+                        'name': name,
+                        'pname': pname,
+                        'drv_path': drv_path,
                         'children': []
                     }
                     parent['children'].append(node)
