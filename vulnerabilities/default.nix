@@ -35,7 +35,7 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-scan";
+        ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-web";
         User = "smarthome";
         Group = "smarthome";
         Environment = "DATABASE_PATH=${cfg.vulnerabilities.databasePath}";
@@ -46,6 +46,14 @@ in
     systemd.timers.vulnerability-scan = {
       description = "Vulnerability Scanner Timer";
       wantedBy = [ "timers.target" ];
+
+      serviceConfig = {
+        ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-scanner";
+        User = "smarthome";
+        Group = "smarthome";
+        Environment = "DATABASE_PATH=${cfg.vulnerabilities.databasePath}";
+        Environment = "VULNIX_PATH=${pkgs.vulnix}";
+      };
 
       timerConfig = {
         OnBootSec = "5min";

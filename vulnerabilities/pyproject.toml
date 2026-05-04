@@ -10,4 +10,5 @@ dependencies = [
 ]
 
 [project.scripts]
-vuln-scan = "app:main"
+vuln-scanner = "app:main"
+vuln-web = "app:run_scan"
