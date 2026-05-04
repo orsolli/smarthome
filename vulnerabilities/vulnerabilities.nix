@@ -7,5 +7,6 @@ pkgs.python3Packages.buildPythonApplication {
 
   propagatedBuildInputs = with pkgs.python3Packages; [
     bottle
+    setuptools
   ];
 }
