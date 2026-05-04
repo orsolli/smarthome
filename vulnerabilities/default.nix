@@ -38,8 +38,10 @@ in
         ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-web";
         User = "smarthome";
         Group = "smarthome";
-        Environment = "DATABASE_PATH=${cfg.vulnerabilities.databasePath}";
-        Environment = "BIND_ADDRESS=${cfg.vulnerabilities.bindAddress}";
+        Environment = {
+          DATABASE_PATH = cfg.vulnerabilities.databasePath;
+          BIND_ADDRESS = cfg.vulnerabilities.bindAddress;
+        };
       };
     };
 
@@ -51,8 +53,10 @@ in
         ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-scanner";
         User = "smarthome";
         Group = "smarthome";
-        Environment = "DATABASE_PATH=${cfg.vulnerabilities.databasePath}";
-        Environment = "VULNIX_PATH=${pkgs.vulnix}";
+        Environment = {
+          DATABASE_PATH = cfg.vulnerabilities.databasePath;
+          VULNIX_PATH = pkgs.vulnix;
+        };
       };
 
       timerConfig = {
