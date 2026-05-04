@@ -11,8 +11,8 @@ This plan follows a **top-down, abstract-to-concrete** structure. It begins with
     * [x] **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
 3. [x] **Core Files**:
     * [x] Create `app.py` (Entry point).
-    * [ ] Create `pyproject.toml` (Dependencies: `bottle`, `sqlite3`).
-    * [ ] Create `default.nix` and `vulnerabilities.nix` (Standard NixOS module boilerplate).
+    * [x] Create `pyproject.toml` (Dependencies: `bottle`).
+    * [x] Create `default.nix` and `vulnerabilities.nix` (Standard NixOS module boilerplate).
 
 ### Phase 2: High-Level Technical Architecture
 **Goal:** Define the data flow and component interactions abstractly.
