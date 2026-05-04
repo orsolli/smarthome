@@ -10,6 +10,7 @@ from bottle import Bottle, request, run, response  # type: ignore
 
 from core import database
 from core.database_storage import DatabaseStorage
+from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 
 app = Bottle()
@@ -25,7 +26,7 @@ pipeline = ScanPipeline.default()
 pipeline.storage = _storage  # Replace mock storage with real storage
 
 
-def run_scan(target: str) -> dict:
+def run_scan(target: str = "/run/current-system") -> dict:
     """Run a full vulnerability scan on the given target.
 
     Delegates to ScanPipeline which orchestrates:
@@ -43,23 +44,6 @@ def run_scan(target: str) -> dict:
         Dict with scan results summary.
     """
     return pipeline.run_scan(target)
-
-
-@app.get("/scan")
-def scan_endpoint():
-    """Trigger a vulnerability scan.
-
-    Query params:
-        target: Derivation path to scan (default: /run/current-system).
-
-    Returns:
-        JSON scan results.
-    """
-    target = request.params.get("target", "/run/current-system")
-    result = run_scan(target)
-    if "error" in result:
-        response.status = 400
-    return result
 
 
 @app.get("/vulnerabilities")

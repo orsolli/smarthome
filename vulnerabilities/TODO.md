@@ -21,7 +21,6 @@ The system consists of three logical layers:
 
 1. [x] **Data Acquisition Layer**:
     * [x] Mock the nix commands so that the system can be tested on a non-nix environment.
-    * [ ] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`.
 2. [x] **Processing Layer**:
     * [x] **Merger**: Uses the local `tree_parser` to consolidate overlapping dependency paths into a single tree structure. The Merger assumes no cyclic dependencies in why-depends outputs. This is guaranteed by Nix's pure dependency graph.
     * [x] **Normalizer**: Converts the tree structure into a flat list of records suitable for database insertion.
@@ -134,7 +133,7 @@ Simulates the output of `nix derivation show`, `vulnix` and `nix why-depends` by
             └───/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv
                 └───/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv
         ```
-4. [x] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`.
+4. [ ] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`. This single script will replace all the mocks and will provide the input for the parser.
     * **Input**: A target path (e.g., `/run/current-system`).
     * **Output**: Dependency graph trees that can be fed into the Merger.
     * *Reference*:
