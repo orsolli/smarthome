@@ -18,13 +18,9 @@ app = Bottle()
 # Default database path (writable location)
 import os
 
-_XDG_DATA_DIR = os.environ.get("XDG_DATA_DIR", "")
-if _XDG_DATA_DIR:
-    _DB_DIR = Path(_XDG_DATA_DIR) / "vulnerabilities"
-else:
-    _DB_DIR = Path.home() / ".local" / "share" / "vulnerabilities"
+DB_PATH = os.environ.get("DATABASE_PATH", str(Path.home() / ".local" / "share" / "vulnerabilities" / "vulnerabilities.db"))
+_DB_DIR = Path(DB_PATH).parent
 _DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = str(_DB_DIR / "vulnerabilities.db")
 
 # Initialize the scan pipeline with production storage
 _storage = DatabaseStorage(DB_PATH)
