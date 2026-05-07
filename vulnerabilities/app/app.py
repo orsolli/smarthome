@@ -15,10 +15,16 @@ from core.scanner import ScanPipeline
 
 app = Bottle()
 
-# Default database path (relative to app location)
-DB_DIR = Path(__file__).parent / "data"
-DB_DIR.mkdir(exist_ok=True)
-DB_PATH = str(DB_DIR / "vulnerabilities.db")
+# Default database path (writable location)
+import os
+
+_XDG_DATA_DIR = os.environ.get("XDG_DATA_DIR", "")
+if _XDG_DATA_DIR:
+    _DB_DIR = Path(_XDG_DATA_DIR) / "vulnerabilities"
+else:
+    _DB_DIR = Path.home() / ".local" / "share" / "vulnerabilities"
+_DB_DIR.mkdir(parents=True, exist_ok=True)
+DB_PATH = str(_DB_DIR / "vulnerabilities.db")
 
 # Initialize the scan pipeline with production storage
 _storage = DatabaseStorage(DB_PATH)
