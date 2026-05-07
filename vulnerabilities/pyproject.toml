@@ -6,7 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "vulnerabilities"
 version = "0.1"
 dependencies = [
-    "bottle"
+    "bottle",
+    "typing_extensions",
 ]
 
 [tool.setuptools.packages.find]
