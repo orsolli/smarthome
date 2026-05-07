@@ -9,6 +9,10 @@ dependencies = [
     "bottle"
 ]
 
+[tool.setuptools.packages.find]
+include = ["app*", "core*", "interfaces*", "mock*", "tree_parser*"]
+exclude = ["data*", "result*", "tests*"]
+
 [project.scripts]
 vuln-scanner = "app:main"
 vuln-web = "app:run_scan"
