@@ -11,6 +11,7 @@ from pathlib import Path
 from bottle import Bottle, request, run, response  # type: ignore
 
 from core import database
+from core import timeseries
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 
@@ -75,6 +76,31 @@ def vulnerabilities_endpoint():
     return vulns
 
 
+@app.get("/timeseries")
+def timeseries_endpoint():
+    """Get vulnerability timeseries for chart rendering.
+
+    Query params:
+        package: Optional package name filter. If omitted, returns all packages.
+        since: Start timestamp (ISO format).
+        until: Optional end timestamp (ISO format).
+
+    Returns:
+        JSON list of timeline rows for charting.
+    """
+    since = request.params.get("since", "2000-01-01")
+    until = request.params.get("until")
+    package = request.params.get("package")
+
+    conn = database.init_db(DB_PATH)
+    if package:
+        data = timeseries.get_timeseries_for_package(conn, package, since, until)
+    else:
+        data = timeseries.get_timeseries_for_all_packages(conn, since, until)
+    conn.close()
+    return data
+
+
 @app.get("/tree/<scan_id:int>")
 def tree_endpoint(scan_id: int):
     """Get the dependency tree for a scan.
@@ -89,6 +115,23 @@ def tree_endpoint(scan_id: int):
     tree = database.get_dependency_tree_for_scan(conn, scan_id)
     conn.close()
     return tree
+
+
+@app.get("/aggregation/<scan_id:int>/<package_name>")
+def aggregation_endpoint(scan_id: int, package_name: str):
+    """Get aggregated severity for a package in a scan.
+
+    Args:
+        scan_id: The scan ID.
+        package_name: Package name.
+
+    Returns:
+        JSON dict with max_severity, scan_count, latest_severity.
+    """
+    conn = database.init_db(DB_PATH)
+    agg = timeseries.get_aggregated_severity(conn, scan_id, package_name)
+    conn.close()
+    return agg
 
 
 @app.get("/health")
