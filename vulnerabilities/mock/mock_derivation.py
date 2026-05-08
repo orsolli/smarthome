@@ -10,10 +10,10 @@ from interfaces import DerivationSourceInterface
 
 # Simulated derivation output for development
 DEMO_DERIVATION1: dict[str, dict[str, Any]] = {
-    "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv": {},
+    "sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv": {},
 }
 DEMO_DERIVATION2: dict[str, dict[str, Any]] = {
-    "/nix/store/vulndrv0000000000000000000000000000-vulnerabilities-0.1.drv": {},
+    "vulndrv0000000000000000000000000000-vulnerabilities-0.1.drv": {},
 }
 
 

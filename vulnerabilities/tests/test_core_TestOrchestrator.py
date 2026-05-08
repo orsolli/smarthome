@@ -48,15 +48,15 @@ class TestOrchestrator(unittest.TestCase):
         merger = TreeMergerImpl()
         formatter = TreeFormatterImpl()
         orchestrator = TreeOrchestrator(parser, merger, formatter)
-        input_text = """/nix/store/root
-└───/nix/store/child-a
-    └───/nix/store/grandchild-a1
-/nix/store/root
-└───/nix/store/child-a
-    └───/nix/store/grandchild-a2
-/nix/store/rootb
-└───/nix/store/childb-ab
-    └───/nix/store/grandchildb-a2b
+        input_text = """/nix/store/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6-root.drv
+└───/nix/store/d1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s6-child-a.drv
+    └───/nix/store/g1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v6-grandchild-a1.drv
+/nix/store/a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6-root.drv
+└───/nix/store/d1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s6-child-a.drv
+    └───/nix/store/g1h2i3j4k5l6m7n8o9p0q1r2s3t4u5v6-grandchild-a2.drv
+/nix/store/b1c2d3e4f5g6h7i8j9k0l1m2n3o4p5q6-rootb.drv
+└───/nix/store/c1d2e3f4g5h6i7j8k9l0m1n2o3p4q5r6-childb-ab.drv
+    └───/nix/store/d1e2f3g4h5i6j7k8l9m0n1o2p3q4r5s6-grandchildb-a2b.drv
 """
         result = orchestrator.process_tree_output(input_text)
         

@@ -33,14 +33,14 @@ class TestMockDerivationSource(unittest.TestCase):
         source = MockDerivationSource()
         result = source.show_derivation("/run/current-system")
         self.assertIsInstance(result, dict)
-        self.assertIn("/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv", result)
+        self.assertIn("sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv", result)
 
     def test_relative_show_derivation_returns_dict(self):
         """show_derivation returns a dict with demo derivation."""
         source = MockDerivationSource()
         result = source.show_derivation("./result")
         self.assertIsInstance(result, dict)
-        self.assertIn("/nix/store/vulndrv0000000000000000000000000000-vulnerabilities-0.1.drv", result)
+        self.assertIn("vulndrv0000000000000000000000000000-vulnerabilities-0.1.drv", result)
 
 
 class TestMockVulnerabilityScanner(unittest.TestCase):

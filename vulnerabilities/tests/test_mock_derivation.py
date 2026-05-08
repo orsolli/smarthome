@@ -8,7 +8,7 @@ class TestMockDerivation(unittest.TestCase):
     def test_returns_demo_derivation(self):
         result = MockDerivationSource().show_derivation("/run/current-system")
         self.assertEqual(len(result), 1)
-        expected_key = "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv"
+        expected_key = "sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv"
         self.assertIn(expected_key, result)
 
     def test_metadata_is_empty_dict(self):

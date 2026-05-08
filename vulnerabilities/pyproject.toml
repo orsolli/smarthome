@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*", "core*", "interfaces*", "mock*", "tree_parser*"]
+include = ["app*", "core*", "interfaces*", "mock*"]
 exclude = ["data*", "result*", "tests*"]
 
 [project.scripts]
