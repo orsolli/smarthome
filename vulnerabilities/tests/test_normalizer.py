@@ -36,7 +36,7 @@ class TestSeverityFromCvss(unittest.TestCase):
 
 def _make_vuln_lookup():
     """Create a vulnerability lookup function from demo data."""
-    vulns = MockVulnerabilityScanner().scan_vulnerabilities("")
+    vulns = MockVulnerabilityScanner().scan_vulnerabilities("/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv")
     
     return {v.get("derivation"): v for v in vulns}
 

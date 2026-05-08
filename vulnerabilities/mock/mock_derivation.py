@@ -9,8 +9,11 @@ from interfaces import DerivationSourceInterface
 
 
 # Simulated derivation output for development
-DEMO_DERIVATIONS: dict[str, dict[str, Any]] = {
+DEMO_DERIVATION1: dict[str, dict[str, Any]] = {
     "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv": {},
+}
+DEMO_DERIVATION2: dict[str, dict[str, Any]] = {
+    "/nix/store/vulndrv0000000000000000000000000000-vulnerabilities-0.1.drv": {},
 }
 
 
@@ -26,4 +29,4 @@ class MockDerivationSource(DerivationSourceInterface):
         Returns:
             A dict mapping derivation paths to their metadata.
         """
-        return DEMO_DERIVATIONS
+        return DEMO_DERIVATION1 if target == '/run/current-system' else DEMO_DERIVATION2

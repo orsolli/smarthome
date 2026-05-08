@@ -9,7 +9,7 @@ from interfaces import VulnerabilityScannerInterface
 
 
 # Simulated vulnix scan output
-DEMO_VULNERABILITIES: list[dict[str, Any]] = [
+DEMO_VULNERABILITIE1: list[dict[str, Any]] = [
     {
         "name": "Diff-9.99.0",
         "pname": "Diff",
@@ -40,6 +40,22 @@ DEMO_VULNERABILITIES: list[dict[str, Any]] = [
     },
 ]
 
+DEMO_VULNERABILITIE2: list[dict[str, Any]] = [
+    {
+        "name": "ed-9.99.0",
+        "pname": "ed",
+        "version": "9.99.0",
+        "derivation": "/nix/store/eddrv000000000000000000000000000000-ed-9.99.0.drv",
+        "affected_by": ["CVE-2021-28794"],
+        "whitelisted": [],
+        "cvssv3_basescore": {
+            "CVE-2021-28794": 9.8,
+        },
+        "description": {
+            "CVE-2021-28794": "The unofficial ShellCheck extension before 0.13.4 for Visual Studio Code mishandles shellcheck.executablePath."
+        },
+    },
+]
 
 class MockVulnerabilityScanner(VulnerabilityScannerInterface):
     """Mock implementation of VulnerabilityScannerInterface."""
@@ -53,4 +69,4 @@ class MockVulnerabilityScanner(VulnerabilityScannerInterface):
         Returns:
             A list of vulnerability records.
         """
-        return DEMO_VULNERABILITIES
+        return DEMO_VULNERABILITIE1 if target == '/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv' else DEMO_VULNERABILITIE2

@@ -15,4 +15,4 @@ exclude = ["data*", "result*", "tests*"]
 
 [project.scripts]
 vuln-web = "app.app:main"
-vuln-scanner = "app.app:run_scan"
+vuln-scanner = "app.app:cli_main"
