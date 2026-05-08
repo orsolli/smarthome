@@ -9,6 +9,7 @@ Usage:
 """
 
 from typing import Any
+import os
 
 from interfaces import (
     DependencyMapperInterface,
@@ -26,6 +27,11 @@ from mock.mock_derivation import MockDerivationSource
 from mock.mock_vulnix import MockVulnerabilityScanner
 from mock.mock_why_depends import MockDependencyMapper
 from core.normalizer import TreeNormalizerImpl
+from core.real_scanner import (
+    RealDerivationSource,
+    RealVulnerabilityScanner,
+    RealDependencyMapper,
+)
 
 
 class MockStorage(StorageInterface):
@@ -126,11 +132,28 @@ class ScanPipeline:
 
     @classmethod
     def default(cls) -> "ScanPipeline":
-        """Create a pipeline with all mock implementations.
+        """Create a pipeline with mock or real implementations.
+
+        If VULNIX_PATH is set, uses real Nix tooling.
+        Otherwise falls back to mock implementations.
 
         Returns:
-            A ScanPipeline configured for development.
+            A ScanPipeline configured for the current environment.
         """
+        vulnix_path = os.environ.get("VULNIX_PATH")
+        if vulnix_path:
+            return cls(
+                derivation_source=RealDerivationSource(),
+                vulnerability_scanner=RealVulnerabilityScanner(),
+                dependency_mapper=RealDependencyMapper(),
+                orchestrator=TreeOrchestrator(
+                    parser=TreeParserImpl(),
+                    merger=TreeMergerImpl(),
+                    formatter=TreeFormatterImpl(),
+                ),
+                tree_normalizer=TreeNormalizerImpl(),
+                storage=MockStorage(),
+            )
         return cls(
             derivation_source=MockDerivationSource(),
             vulnerability_scanner=MockVulnerabilityScanner(),

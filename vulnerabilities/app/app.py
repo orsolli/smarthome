@@ -4,12 +4,13 @@ Ties together the ScanPipeline orchestrator and database queries
 to run scans and serve results via a Bottle web server.
 """
 
+import argparse
+import sys
 from pathlib import Path
 
 from bottle import Bottle, request, run, response  # type: ignore
 
 from core import database
-from core.database_storage import DatabaseStorage
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 
@@ -28,7 +29,7 @@ pipeline = ScanPipeline.default()
 pipeline.storage = _storage  # Replace mock storage with real storage
 
 
-def run_scan(target: str = "/run/current-system") -> dict:
+def run_scan(target: str) -> dict:
     """Run a full vulnerability scan on the given target.
 
     Delegates to ScanPipeline which orchestrates:
@@ -105,6 +106,34 @@ def main():
     # Initialize database on startup
     database.init_db(DB_PATH).close()
     run(app, host="localhost", port=8080, debug=True)
+
+
+def cli_main() -> None:
+    """CLI entry point for vuln-scanner.
+
+    Parses --target argument and runs a scan.
+    """
+    parser = argparse.ArgumentParser(
+        description="Run a vulnerability scan on a Nix derivation target."
+    )
+    parser.add_argument(
+        "--target",
+        default="/run/current-system",
+        help="Target derivation path to scan (default: /run/current-system)",
+    )
+    args = parser.parse_args()
+
+    result = run_scan(args.target)
+
+    if "error" in result:
+        print(f"Error: {result['error']}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Scan ID: {result['scan_id']}")
+    print(f"Target: {result['target']}")
+    print(f"Vulnerabilities found: {result['vulnerabilities_found']}")
+    for vuln in result.get("vulnerabilities", []):
+        print(f"  - {vuln['package_name']} ({vuln['severity']})")
 
 
 if __name__ == "__main__":
