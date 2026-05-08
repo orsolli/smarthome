@@ -3,13 +3,7 @@ This plan follows a **top-down, abstract-to-concrete** structure. It begins with
 ### Phase 1: Project Foundation & Directory Management
 **Goal:** Establish the project structure and handle existing directory conflicts.
 
-1. [x] **Directory Resolution**:
-    * The existing directory `dev/smarthome/vulnerablilities/` contains a typo.
-    * **Action**: Rename `dev/smarthome/vulnerablilities/` to `dev/smarthome/vulnerabilities/`.
-2. [x] **Dependency Management**:
-    * [x] **`tree_parser`**: Copy the `dev/tree_parser/tree_parser/` directory contents directly into `dev/smarthome/vulnerabilities/tree_parser/`. This localizes the dependency and makes it editable within the smarthome project.
-    * [x] **`vulnix`**: Since the development environment is not a Nix system, create mock scripts to simulate the scanner's output.
-3. [x] **Core Files**:
+1. [x] **Core Files**:
     * [x] Create `app.py` (Entry point).
     * [x] Create `pyproject.toml` (Dependencies: `bottle`).
     * [x] Create `default.nix` and `vulnerabilities.nix` (Standard NixOS module boilerplate).
@@ -153,9 +147,8 @@ Simulates the output of `nix derivation show`, `vulnix` and `nix why-depends` by
         ```
 
 #### 2. `app.py` (Server & Logic)
-* **Imports**: `bottle`, `sqlite3`, `tree_parser` (local).
+* **Imports**: `bottle`, `sqlite3`.
 * **Implemented API routes**:
-    * `GET /scan?target=...` — Triggers a full scan and stores results.
     * `GET /vulnerabilities?since=...&until=...&package=...` — Queries vulnerability events.
     * `GET /tree/<scan_id>` — Returns dependency tree nodes for a scan.
     * `GET /health` — Health check endpoint.
@@ -199,6 +192,6 @@ pkgs.python3Packages.buildPythonApplication {
   pname = "vulnerabilities";
   version = "0.1";
   src = ./.;
-  propagatedBuildInputs = [ pkgs.vulnix ]; # For production; mocked in dev
+  propagatedBuildInputs = with pkgs.python3Packages; [ bottle setuptools ];
 }
 ```

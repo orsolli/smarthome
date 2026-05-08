@@ -14,5 +14,5 @@ include = ["app*", "core*", "interfaces*", "mock*", "tree_parser*"]
 exclude = ["data*", "result*", "tests*"]
 
 [project.scripts]
-vuln-scanner = "app.app:main"
-vuln-web = "app.app:run_scan"
+vuln-web = "app.app:main"
+vuln-scanner = "app.app:run_scan"
