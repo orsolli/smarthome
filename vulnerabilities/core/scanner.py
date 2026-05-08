@@ -189,6 +189,7 @@ class ScanPipeline:
         system_derivation = next(iter(derivations), None)
         if not system_derivation:
             return {"error": "No derivation found for target", "target": target}
+        system_derivation = f'/nix/store/{system_derivation}'
 
         # Step 2: Scan for vulnerabilities
         vulns = self.vulnerability_scanner.scan_vulnerabilities(system_derivation)

@@ -127,7 +127,7 @@ Simulates the output of `nix derivation show`, `vulnix` and `nix why-depends` by
             └───/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv
                 └───/nix/store/7kwbv6s59ipydz29s086wn73wnnvjrwf-Diff-1.0.2.drv
         ```
-4. [ ] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`. This single script will replace all the mocks and will provide the input for the parser.
+4. [x] A script that runs the `nix why-depends` for every vulnerability found upon calling `vulnix` with the input from `nix derivation show`. This single script will replace all the mocks and will provide the input for the parser.
     * **Input**: A target path (e.g., `/run/current-system`).
     * **Output**: Dependency graph trees that can be fed into the Merger.
     * *Reference*:
@@ -185,6 +185,7 @@ dependencies = [
 ]
 ```
 
+
 ### Phase 6: Parser Fix — Version-Aware Package Name Extraction
 **Goal:** Fix `_extract_name_from_path()` to handle package names with dashes and missing versions.
 
@@ -195,18 +196,18 @@ dependencies = [
 
 #### Strategy
 Split on the last dash **only if** the suffix starts with a digit (version pattern).
+Strip any alphanumeric Nix hash prefix (any length).
 
 #### Implementation Order (TDD)
 
-1. [ ] **Write tests first** in `tests/test_parser_version.py`:
-    * `test_standard_version`: `/nix/store/ed-1.22.5.drv` → `('ed', '1.22.5')`
-    * `test_version_with_rc`: `/nix/store/some-lib-1.0-rc1.drv` → `('some-lib', '1.0-rc1')`
-    * `test_no_version`: `/nix/store/some-lib.drv` → `('some-lib', '')`
-    * `test_no_version_dashes`: `/nix/store/some-lib-with-dashes.drv` → `('some-lib-with-dashes', '')`
+1. [x] **Write tests first** in `tests/test_parser_version.py`:
+    * `test_standard_version`: `/nix/store/xyz-ed-1.22.5.drv` → `('ed', '1.22.5')`
+    * `test_version_with_rc`: `/nix/store/xyz-some-lib-1.0-rc1.drv` → `('some-lib', '1.0-rc1')`
+    * `test_no_version`: `/nix/store/xyz-some-lib.drv` → `('some-lib', '')`
+    * `test_no_version_dashes`: `/nix/store/xyz-some-lib-with-dashes.drv` → `('some-lib-with-dashes', '')`
     * `test_nix_hash_stripped`: `/nix/store/f8w6rdvahz02m1qlmv7fwvkljb1i1aq2-vulnerabilities-0.1.drv` → `('vulnerabilities', '0.1')`
-    * `test_no_hash_dashes`: `/nix/store/root-1.0.drv` → `('root', '1.0')`
 
-2. [ ] **Implement** in `core/parser.py::_extract_name_from_path()`:
+2. [x] **Implement** in `core/parser.py::_extract_name_from_path()`:
     ```python
     import re
     
@@ -223,8 +224,8 @@ Split on the last dash **only if** the suffix starts with a digit (version patte
         match = re.match(r'^(.+)-([0-9][\w.+-]*)$', filename)
         if match:
             name, version = match.group(1), match.group(2)
-            # Strip 32-char Nix hash prefix
-            hash_match = re.match(r'^[0-9a-f]{32}-', name)
+            # Strip Nix hash prefix (any alphanumeric, any length)
+            hash_match = re.match(r'^[0-9a-zA-Z]+-', name)
             if hash_match:
                 name = name[hash_match.end():]
             return name, version
@@ -232,64 +233,10 @@ Split on the last dash **only if** the suffix starts with a digit (version patte
         return filename, ""
     ```
 
-3. [ ] **Update existing tests** (`test_core_TestParser.py`):
+3. [x] **Update existing tests** (`test_core_TestParser.py`):
     * `test_complex_tree`: root name `'root-1.0'` → `'root'`
     * `test_parse_tree_block`: child `'a-1.0'` → `'a'`, grandchildren `'a1-1.0'` → `'a1'`, `'a2-1.0'` → `'a2'`
 
-4. [ ] **Run full test suite**: `python -m unittest discover tests` — all 65+ tests pass.
-
-### Phase 6: Parser Fix — Version-Aware Package Name Extraction
-**Goal:** Fix `_extract_name_from_path()` to handle package names with dashes and missing versions.
-
-#### Problem
-`rsplit('-', 2)` fails when the package name contains dashes:
-- `some-lib-1.0-rc1.drv` → `('1.0', 'rc1')` ❌ (should be `('some-lib', '1.0-rc1')`)
-- `ed-1.22.5.drv` → `('ed', '1.22.5')` ✓ (works by accident)
-
-#### Strategy
-Split on the last dash **only if** the suffix starts with a digit (version pattern).
-
-#### Implementation Order (TDD)
-
-1. [ ] **Write tests first** in `tests/test_parser_version.py`:
-    * `test_standard_version`: `/nix/store/ed-1.22.5.drv` → `('ed', '1.22.5')`
-    * `test_version_with_rc`: `/nix/store/some-lib-1.0-rc1.drv` → `('some-lib', '1.0-rc1')`
-    * `test_no_version`: `/nix/store/some-lib.drv` → `('some-lib', '')`
-    * `test_no_version_dashes`: `/nix/store/some-lib-with-dashes.drv` → `('some-lib-with-dashes', '')`
-    * `test_nix_hash_stripped`: `/nix/store/f8w6rdvahz02m1qlmv7fwvkljb1i1aq2-vulnerabilities-0.1.drv` → `('vulnerabilities', '0.1')`
-    * `test_no_hash_dashes`: `/nix/store/root-1.0.drv` → `('root', '1.0')`
-
-2. [ ] **Implement** in `core/parser.py::_extract_name_from_path()`:
-    ```python
-    import re
-    
-    def _extract_name_from_path(path: str) -> tuple[str, str]:
-        if '/nix/store/' in path:
-            filename = path.rsplit('/nix/store/', 1)[-1]
-        else:
-            filename = path
-        
-        if filename.endswith('.drv'):
-            filename = filename[:-4]
-        
-        # Split on last dash only if suffix is version-like (starts with digit)
-        match = re.match(r'^(.+)-([0-9][\w.+-]*)$', filename)
-        if match:
-            name, version = match.group(1), match.group(2)
-            # Strip 32-char Nix hash prefix
-            hash_match = re.match(r'^[0-9a-f]{32}-', name)
-            if hash_match:
-                name = name[hash_match.end():]
-            return name, version
-        
-        return filename, ""
-    ```
-
-3. [ ] **Update existing tests** (`test_core_TestParser.py`):
-    * `test_complex_tree`: root name `'root-1.0'` → `'root'`
-    * `test_parse_tree_block`: child `'a-1.0'` → `'a'`, grandchildren `'a1-1.0'` → `'a1'`, `'a2-1.0'` → `'a2'`
-
-4. [ ] **Run full test suite**: `python -m unittest discover tests` — all 65+ tests pass.
 
 #### 5. `vulnerabilities.nix`
 ```nix

@@ -5,6 +5,7 @@ Activated when VULNIX_PATH environment variable is set.
 
 import json
 import os
+import re
 import subprocess
 from typing import Any
 
@@ -30,18 +31,7 @@ class RealDerivationSource(DerivationSourceInterface):
         )
         if result.returncode != 0:
             return {}
-        data = json.loads(result.stdout)
-        # nix derivation show v4 wraps derivations under a "derivations" key
-        if isinstance(data, dict) and "derivations" in data:
-            data = data["derivations"]
-        # Enrich with output path from each derivation's outputs
-        for drv_path, info in data.items():
-            if isinstance(info, dict):
-                outputs = info.get("outputs", {})
-                if isinstance(outputs, dict):
-                    out_path = outputs.get("out", {}).get("path", "")
-                    info["output_path"] = out_path
-        return data
+        return json.loads(result.stdout)["derivations"]
 
 
 class RealVulnerabilityScanner(VulnerabilityScannerInterface):
@@ -58,8 +48,6 @@ class RealVulnerabilityScanner(VulnerabilityScannerInterface):
             text=True,
             check=False,
         )
-        if result.returncode != 0:
-            return []
         try:
             return json.loads(result.stdout)
         except json.JSONDecodeError:
@@ -85,4 +73,4 @@ class RealDependencyMapper(DependencyMapperInterface):
         )
         if result.returncode != 0:
             return ""
-        return result.stdout
+        return re.sub(r'\x1b\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]', '', result.stdout)
