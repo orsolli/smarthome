@@ -23,6 +23,12 @@ DEMO_DEPENDENCY_TREES: dict[tuple[str, str], str] = {
     ): """/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv
 └───/nix/store/zq99dyzglrigchn618wkncr9fxcd5qsc-pre-switch-checks.drv
     └───/nix/store/b2cnc4mi1dvmcbsx1fnjfpwrc4srsisp-ShellCheck-0.11.0.drv""",
+    (
+        "/nix/store/f8w6rdvahz02m1qlmv7fwvkljb1i1aq2-vulnerabilities-0.1.drv",
+        "/nix/store/7whqc6b2wdxd3rz141vnsfizcxbizcnh-ed-1.22.5.drv",
+    ): """/nix/store/f8w6rdvahz02m1qlmv7fwvkljb1i1aq2-vulnerabilities-0.1.drv
+└───/nix/store/q2xn5647kadsgpz40xcmjssa0pmdmiwi-stdenv-linux.drv
+    └───/nix/store/7whqc6b2wdxd3rz141vnsfizcxbizcnh-ed-1.22.5.drv""",
 }
 
 

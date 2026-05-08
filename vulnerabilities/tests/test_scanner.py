@@ -35,6 +35,13 @@ class TestMockDerivationSource(unittest.TestCase):
         self.assertIsInstance(result, dict)
         self.assertIn("/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv", result)
 
+    def test_relative_show_derivation_returns_dict(self):
+        """show_derivation returns a dict with demo derivation."""
+        source = MockDerivationSource()
+        result = source.show_derivation("./result")
+        self.assertIsInstance(result, dict)
+        self.assertIn("/nix/store/f8w6rdvahz02m1qlmv7fwvkljb1i1aq2-vulnerabilities-0.1.drv", result)
+
 
 class TestMockVulnerabilityScanner(unittest.TestCase):
     """Test MockVulnerabilityScanner implementation."""
@@ -42,7 +49,7 @@ class TestMockVulnerabilityScanner(unittest.TestCase):
     def test_scan_returns_vulnerabilities(self):
         """scan_vulnerabilities returns demo vulnerabilities."""
         scanner = MockVulnerabilityScanner()
-        result = scanner.scan_vulnerabilities("/nix/store/test.drv")
+        result = scanner.scan_vulnerabilities("/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv")
         self.assertIsInstance(result, list)
         self.assertGreater(len(result), 0)
         pnames = {v["pname"] for v in result}
@@ -89,7 +96,7 @@ class TestTreeNormalizerImpl(unittest.TestCase):
     def test_normalize_with_mock_lookup(self):
         """Normalizing with default mock lookup finds vulnerabilities."""
         from mock.mock_vulnix import MockVulnerabilityScanner
-        vulns = MockVulnerabilityScanner().scan_vulnerabilities("")
+        vulns = MockVulnerabilityScanner().scan_vulnerabilities("/nix/store/z35z9cw932qg03bb0anvj0j9n0gr7idr-nixos-system-OrjanAMD-595.58.03-26.05pre977467.4c1018dae018.drv")
         normalizer = TreeNormalizerImpl()
         tree = {
             "pname": "Diff",
