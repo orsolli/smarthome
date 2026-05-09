@@ -8,19 +8,34 @@ import argparse
 import sys
 from pathlib import Path
 
-from bottle import Bottle, request, run, response  # type: ignore
+from bottle import Bottle, request, run  # type: ignore
 
 from core import database
 from core import timeseries
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
+from app.api import (
+    api_scans_endpoint,
+    api_tree_endpoint,
+    api_vuln_map_endpoint,
+    scan_detail_endpoint,
+)
 
 app = Bottle()
 
 # Default database path (writable location)
 import os
 
-DB_PATH = os.environ.get("DATABASE_PATH", str(Path.home() / ".local" / "share" / "vulnerabilities" / "vulnerabilities.db"))
+DB_PATH = os.environ.get(
+    "DATABASE_PATH",
+    str(
+        Path.home()
+        / ".local"
+        / "share"
+        / "vulnerabilities"
+        / "vulnerabilities.db"
+    ),
+)
 _DB_DIR = Path(DB_PATH).parent
 _DB_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -103,7 +118,7 @@ def timeseries_endpoint():
 
 @app.get("/tree/<scan_id:int>")
 def tree_endpoint(scan_id: int):
-    """Get the dependency tree for a scan.
+    """Get the dependency tree for a scan (JSON format).
 
     Args:
         scan_id: The scan ID.
@@ -142,6 +157,30 @@ def health_endpoint():
         JSON health status.
     """
     return {"status": "ok"}
+
+
+@app.get("/api/scans")
+def _api_scans():
+    """HTMX endpoint: list of scans for sidebar."""
+    return api_scans_endpoint()
+
+
+@app.get("/api/tree/<scan_id:int>")
+def _api_tree(scan_id: int):
+    """HTMX endpoint: HTML dependency tree."""
+    return api_tree_endpoint(scan_id)
+
+
+@app.get("/api/vuln-map/<scan_id:int>")
+def _api_vuln_map(scan_id: int):
+    """HTMX endpoint: JSON vulnerability map."""
+    return api_vuln_map_endpoint(scan_id)
+
+
+@app.get("/scan/<scan_id:int>")
+def _scan_detail(scan_id: int):
+    """HTMX endpoint: scan detail page."""
+    return scan_detail_endpoint(scan_id)
 
 
 def main():
