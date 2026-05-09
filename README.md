@@ -21,6 +21,30 @@ Declarative smart home monitoring infrastructure built on NixOS.
 - **Storage**: SQLite time-series with automatic schema creation
 - **Visualization**: Flask/Plotly dashboard with interactive charts
 
+## Vulnerability Scanner Module
+
+The `vulnerabilities/` subdirectory implements a NixOS vulnerability scanner with:
+
+### Backend
+- **ScanPipeline**: Orchestrates derivation resolution, vulnix scanning, dependency mapping, tree merging, normalization
+- **Database**: SQLite with `scans`, `vulnerability_events`, `dependency_tree` tables
+- **Timeseries queries**: Package-level and global vulnerability timelines
+
+### Frontend (Phase 3)
+- **HTMX-powered SPA**: Sidebar scan list, collapsible dependency tree, timeline bar chart
+- **Severity coloring**: CRITICAL (red) → HIGH (orange) → MEDIUM (yellow) → LOW (green)
+- **API endpoints**:
+  - `GET /api/scans` — Scan list for sidebar
+  - `GET /api/tree/<scan_id>` — HTML dependency tree
+  - `GET /api/vuln-map/<scan_id>` — JSON vulnerability map
+  - `GET /timeseries` — Timeline data
+  - `GET /aggregation/<scan_id>/<package>` — Severity aggregation
+  - `GET /scan/<scan_id>` — Full scan detail page
+
+### Test Coverage
+- 131 tests across 15 test modules
+- 100% pass rate on all checks (mypy, unittest, nix-build)
+
 ## Principles
 
 | Principle          | Description                                                                 |

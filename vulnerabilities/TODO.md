@@ -26,10 +26,10 @@ The system consists of three logical layers:
 **Goal:** a historical status page showing vulnerability duration in a dependency structure.
 
 **Current Requirements:**
-* [ ] **Frontend**: HTMX actions fetch tree nodes lazily on expand events.
-* [ ] **File Structure**: Display the dependency tree of vulnerable packages.
-* [ ] **Timeseries**: Visualize the frequency of specific package names becoming vulnerable over time.
-* [ ] **Timeseries aggregation**: If any child component is red, parent is red. Only green if all child components are green. Larger aggregation windows result in darker red (higher aggregate severity).
+* [x] **Frontend**: HTMX actions fetch tree nodes lazily on expand events.
+* [x] **File Structure**: Display the dependency tree of vulnerable packages.
+* [x] **Timeseries**: Visualize the frequency of specific package names becoming vulnerable over time.
+* [x] **Timeseries aggregation**: If any child component is red, parent is red. Only green if all child components are green. Larger aggregation windows result in darker red (higher aggregate severity).
 
 **Data Presentation (Time-Series):** A Timeline Bar Chart is necessary to show the history. This chart must render segmented bars, where the color and start/end points of a segment visually indicate:
 * [ ] **Color**: Gradient from light green (low severity) to dark red (critical). Severity mapping: Low → Medium → High → Critical, with lighter greens for cleaner states and darker reds for unmitigated.
