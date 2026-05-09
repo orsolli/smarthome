@@ -169,3 +169,30 @@ class StorageInterface(ABC):
             The ID of the inserted node.
         """
         ...
+
+    @abstractmethod
+    def update_dependency_node(
+        self,
+        id: int,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
+    ) -> int:
+        """Update a node in the dependency tree.
+
+        Args:
+            id: The ID of the node to update.
+            scan_id: The ID of the scan.
+            package_name: The name of the package.
+            drv_path: The Nix derivation path.
+            parent_id: The ID of the parent node.
+            child_id: The ID of the child node.
+            vulnerability_event_id: The ID of the linked vulnerability event.
+
+        Returns:
+            The ID of the inserted node.
+        """
+        ...

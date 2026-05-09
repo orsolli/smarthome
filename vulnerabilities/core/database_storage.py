@@ -87,3 +87,24 @@ class DatabaseStorage(StorageInterface):
             child_id=child_id,
             vulnerability_event_id=vulnerability_event_id,
         )
+
+    def update_dependency_node(
+        self,
+        id: int,
+        scan_id: int | None = None,
+        package_name: str | None = None,
+        drv_path: str | None = None,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
+    ) -> int:
+        return database.update_dependency_node(
+            self.conn,
+            id,
+            scan_id,
+            package_name,
+            drv_path,
+            parent_id=parent_id,
+            child_id=child_id,
+            vulnerability_event_id=vulnerability_event_id,
+        )
