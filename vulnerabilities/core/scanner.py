@@ -87,6 +87,30 @@ class MockStorage(StorageInterface):
         })
         return node_id
 
+    def update_dependency_node(
+        self,
+        id: int,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
+    ) -> int:
+        existing = next((n for n in self._nodes if n["id"] == id), None)
+        if not existing:
+            raise ValueError(f"Node with ID {id} does not exist")
+        existing.update({
+            "id": id,
+            "scan_id": scan_id,
+            "package_name": package_name,
+            "drv_path": drv_path,
+            "parent_id": parent_id,
+            "child_id": child_id,
+            "vulnerability_event_id": vulnerability_event_id,
+        })
+        return id
+
 
 class ScanPipeline:
     """Orchestrates the full vulnerability scan workflow.
@@ -212,42 +236,41 @@ class ScanPipeline:
         merged = self.orchestrator.process_tree_output(dep_trees)['tree']
 
         # Step 5: Normalize to flat records using the vuln_map from step 2
-        records = self.tree_normalizer.normalize(merged, vuln_map)
+        vulnerability_events = self.tree_normalizer.normalize(merged, vuln_map)
 
         # Step 6: Persist to storage
         scan_id = self.storage.insert_scan(target)
-        event_ids: list[int] = []
-        for record in records:
-            event_id = self.storage.insert_vulnerability_event(
+        for record in vulnerability_events:
+            record['event_id'] = self.storage.insert_vulnerability_event(
                 scan_id,
                 record["package_name"],
                 record["drv_path"],
                 record["severity"],
             )
-            event_ids.append(event_id)
-            self._store_tree_nodes(scan_id, merged, event_id)
+        self._store_tree_nodes(scan_id, merged, {v["drv_path"]: v for v in vulnerability_events})
 
         return {
             "scan_id": scan_id,
             "target": target,
-            "vulnerabilities_found": len(records),
-            "vulnerabilities": records,
+            "vulnerabilities_found": len(vulnerability_events),
+            "vulnerabilities": vulnerability_events,
         }
 
     def _store_tree_nodes(
         self,
         scan_id: int,
         tree: dict,
-        vuln_event_id: int,
+        vuln_events: dict[str, Any],
+        parent_id: int | None = None,
     ) -> None:
         """Recursively store dependency tree nodes in storage.
 
         Args:
             scan_id: The scan ID.
             tree: The dependency tree dict.
-            vuln_event_id: Linked vulnerability event ID.
+            vuln_events: Vulnerability events.
         """
-        pname = tree.get("pname", "")
+        pname = tree.get("pname", tree.get("name", ""))
         drv_path = tree.get("drv_path", "")
         if not pname and not drv_path:
             return
@@ -256,8 +279,22 @@ class ScanPipeline:
             scan_id,
             pname or drv_path,
             drv_path,
-            vulnerability_event_id=vuln_event_id,
+            parent_id=parent_id,
+            vulnerability_event_id=vuln_events.get(drv_path).get("event_id") if vuln_events.get(drv_path) else None,
         )
 
+        severity_score = vuln_events.get(drv_path, {}).get("severity_score", 0)
+        child_id = None
+
         for child in tree.get("children", []):
-            self._store_tree_nodes(scan_id, child, vuln_event_id)
+            node = self._store_tree_nodes(scan_id, child, vuln_events, parent_id=node_id)
+            if node["severity_score"] > severity_score:
+                severity_score = node["severity_score"]
+                child_id = node["id"]
+        if child_id:
+            self.storage.update_dependency_node(node_id, child_id=child_id)
+
+        return {
+            "id": node_id,
+            "severity_score": severity_score,
+        }

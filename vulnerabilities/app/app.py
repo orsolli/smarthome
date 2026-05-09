@@ -187,7 +187,8 @@ def main():
     """Run the Bottle server."""
     # Initialize database on startup
     database.init_db(DB_PATH).close()
-    run(app, host="localhost", port=8080, debug=True)
+    host, port = os.environ.get("BIND_ADDRESS", "localhost:8080").split(":")
+    run(app, host=host, port=int(port), debug=True)
 
 
 def cli_main() -> None:

@@ -6,10 +6,9 @@ Provides HTMX-compatible endpoints for:
 - /api/vuln-map/<scan_id>: JSON vulnerability map
 """
 
-from bottle import request  # type: ignore
-
 from core import database
 from app.templates import base_html, tree_html
+from core.normalizer import _cvss_from_severity
 
 
 def _get_db():
@@ -40,6 +39,7 @@ def api_scans_endpoint():
             f'<div class="scan-item" '
             f'hx-get="/scan/{s["id"]}" '
             f'hx-swap="innerHTML" '
+            f'hx-trigger="click" '
             f'hx-target="#detail-panel">'
             f'{s["target"]} ({s["timestamp"]})</div>'
         )
@@ -48,9 +48,8 @@ def api_scans_endpoint():
 
 def api_tree_endpoint(scan_id: int):
     """Get dependency tree as HTML for a scan."""
-    conn = _get_db()
-    nodes = database.get_dependency_tree_for_scan(conn, scan_id)
-    conn.close()
+    with _get_db() as conn:
+        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
 
     if not nodes:
         return "<p>No tree data available for this scan.</p>"
@@ -67,12 +66,13 @@ def api_tree_endpoint(scan_id: int):
 
     # Get vuln map for severity coloring
     vuln_map: dict[str, dict] = {}
-    cursor = conn.execute(
-        "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
-        (scan_id,),
-    )
-    for row in cursor.fetchall():
-        vuln_map[row[0]] = {"severity": row[1]}
+    with _get_db() as conn:
+        cursor = conn.execute(
+            "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
+            (scan_id,),
+        )
+        for row in cursor.fetchall():
+            vuln_map[row[0]] = {"severity": row[1]}
 
     def _severity_class(drv_path: str) -> tuple[str, str]:
         """Return (severity_class, severity_label) for a drv_path."""
@@ -80,17 +80,24 @@ def api_tree_endpoint(scan_id: int):
         sev = info.get("severity", "NONE")
         return f"sev-{sev}", sev
 
-    def _render(node: dict) -> str:
+    def _render(node: dict) -> tuple[str, str]:
         pname = node.get("package_name", "unknown")
         drv_path = node.get("drv_path", "")
         node_id = f"node-{drv_path.replace('/', '_').replace('.', '_')}"
-        children = children_map.get(str(node.get("id")), [])
-        has_children = len(children) > 0
         sev_class, severity = _severity_class(drv_path)
+        children = children_map.get(str(node.get("id")), [])
+        children_html = ""
+        for child in children:
+            html, child_severity = _render(child)
+            children_html += html
+            if _cvss_from_severity(child_severity) > _cvss_from_severity(severity):
+                severity = child_severity
+                sev_class = f"sev-{severity}"
+        has_children = len(children_html) > 0
 
         html = f'<div class="tree-node" id="{node_id}">\n'
         html += f'  <div class="tree-node-header" onclick="toggleNode(\'{node_id}\')">\n'
-        expand_class = "expanded" if has_children else "leaf"
+        expand_class = "" if has_children else "leaf"
         html += f'    <span class="expand-icon {expand_class}">&#9654;</span>\n'
         html += f'    <span class="severity-dot {sev_class}"></span>\n'
         html += f'    <span class="pkg-name">{pname}</span>\n'
@@ -98,15 +105,15 @@ def api_tree_endpoint(scan_id: int):
         html += f'  </div>\n'
         if has_children:
             html += f'  <div class="tree-children" id="{node_id}-children">\n'
-            for child in children:
-                html += _render(child)
+            html += children_html
             html += "  </div>\n"
         html += "</div>"
-        return html
+        return html, severity
 
     result = ""
     for root in root_nodes:
-        result += _render(root)
+        html, _severity = _render(root)
+        result += html
     return result
 
 

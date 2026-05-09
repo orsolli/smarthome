@@ -136,6 +136,50 @@ def insert_dependency_node(
     conn.commit()
     return cursor.lastrowid or 0
 
+def update_dependency_node(
+    conn: sqlite3.Connection,
+    id: int,
+    scan_id: int | None = None,
+    package_name: str | None = None,
+    drv_path: str | None = None,
+    parent_id: int | None = None,
+    child_id: int | None = None,
+    vulnerability_event_id: int | None = None,
+) -> int:
+    """Update a dependency tree node and return its ID.
+
+    Args:
+        conn: Database connection.
+        id: The ID of the node to update.
+        scan_id: Linking scan ID.
+        package_name: Package name.
+        drv_path: Nix derivation path.
+        parent_id: Optional parent node ID.
+        child_id: Optional child node ID.
+        vulnerability_event_id: Optional linked vulnerability event ID.
+
+    Returns:
+        The ID of the updated node.
+    """
+    existing = conn.execute("SELECT scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id FROM dependency_tree WHERE id = ?", (id,)).fetchone()
+    if not existing:
+        raise ValueError(f"Node with ID {id} does not exist")
+    existing_scan_id, existing_package_name, existing_drv_path, existing_parent_id, existing_child_id, existing_vuln_event_id = existing[0:6]
+    scan_id = existing_scan_id if scan_id is None else scan_id
+    package_name = existing_package_name if package_name is None else package_name
+    drv_path = existing_drv_path if drv_path is None else drv_path
+    parent_id = existing_parent_id if parent_id is None else parent_id
+    child_id = existing_child_id if child_id is None else child_id
+    vulnerability_event_id = existing_vuln_event_id if vulnerability_event_id is None else vulnerability_event_id
+    cursor = conn.execute(
+        """UPDATE dependency_tree
+           SET scan_id = ?, package_name = ?, drv_path = ?, parent_id = ?, child_id = ?, vulnerability_event_id = ?
+           WHERE id = ?""",
+        (scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id, id),
+    )
+    conn.commit()
+    return cursor.lastrowid or 0
+
 
 def get_vulnerabilities_since(
     conn: sqlite3.Connection, since: str, until: str | None = None

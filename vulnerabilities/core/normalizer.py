@@ -30,6 +30,24 @@ def _severity_from_cvss(cvss_score: float) -> str:
         return "MEDIUM"
     return "LOW"
 
+def _cvss_from_severity(severity: str) -> float:
+    """Convert a severity label back to a CVSS score for storage.
+
+    Args:
+        severity: Severity label string.
+
+    Returns:
+        Representative CVSS score for the severity level.
+    """
+    mapping = {
+        "CRITICAL": 9.0,
+        "HIGH": 7.0,
+        "MEDIUM": 4.0,
+        "LOW": 0.1,
+        "NONE": 0.0,
+    }
+    return mapping.get(severity.upper(), 0.0)
+
 
 class TreeNormalizerImpl(TreeNormalizerInterface):
     """Implementation of TreeNormalizerInterface.
@@ -52,15 +70,15 @@ class TreeNormalizerImpl(TreeNormalizerInterface):
         Returns:
             List of dicts with keys: package_name, drv_path, severity.
         """
-        records: list[dict[str, Any]] = []
+        vulnerability_events: list[dict[str, Any]] = []
         seen: set[tuple[str, str]] = set()
-        _traverse_tree(tree, records, vuln_map, seen)
-        return records
+        _traverse_tree(tree, vulnerability_events, vuln_map, seen)
+        return vulnerability_events
 
 
 def _traverse_tree(
     node: dict[str, Any],
-    records: list[dict[str, Any]],
+    vulnerability_events: list[dict[str, Any]],
     vuln_map: dict[str, Any] | None,
     seen: set[tuple[str, str]] | None = None,
 ) -> None:
@@ -68,7 +86,7 @@ def _traverse_tree(
 
     Args:
         node: Current tree node.
-        records: Accumulator list for found records.
+        vulnerability_events: Accumulator list for found vulnerability_events.
         vuln_map: Dict mapping drv_path to vulnerability info.
         seen: Set of already-seen (pname, drv_path) tuples for dedup.
     """
@@ -90,13 +108,14 @@ def _traverse_tree(
         cvss_scores = vuln_info.get("cvssv3_basescore", {})
         max_score = max(cvss_scores.values()) if cvss_scores else 0.0
         severity = _severity_from_cvss(max_score)
-        records.append(
+        vulnerability_events.append(
             {
                 "package_name": pname or drv_path,
                 "drv_path": drv_path,
                 "severity": severity,
+                "severity_score": max_score,
             }
         )
 
     for child in node.get("children", []):
-        _traverse_tree(child, records, vuln_map, seen)
+        _traverse_tree(child, vulnerability_events, vuln_map, seen)
