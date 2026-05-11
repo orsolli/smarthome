@@ -26,7 +26,7 @@ Declarative smart home monitoring infrastructure built on NixOS.
 The `vulnerabilities/` subdirectory implements a NixOS vulnerability scanner with:
 
 ### Backend
-- **ScanPipeline**: Orchestrates derivation resolution, vulnix scanning, dependency mapping, tree merging, normalization
+- **ScanPipeline**: Orchestrates derivation resolution, vulnix scanning, dependency mapping, tree merging, normalization with severity propagation up the tree (parent nodes inherit highest child severity)
 - **Database**: SQLite with `scans`, `vulnerability_events`, `dependency_tree` tables
 - **Timeseries queries**: Package-level and global vulnerability timelines
 
@@ -35,7 +35,7 @@ The `vulnerabilities/` subdirectory implements a NixOS vulnerability scanner wit
 - **Severity coloring**: CRITICAL (red) → HIGH (orange) → MEDIUM (yellow) → LOW (green)
 - **API endpoints**:
   - `GET /api/scans` — Scan list for sidebar
-  - `GET /api/tree/<scan_id>` — HTML dependency tree
+  - `GET /api/tree/<scan_id>` — HTML dependency tree with severity-propagated nodes (parent shows max child severity)
   - `GET /api/vuln-map/<scan_id>` — JSON vulnerability map
   - `GET /timeseries` — Timeline data
   - `GET /aggregation/<scan_id>/<package>` — Severity aggregation
@@ -86,6 +86,9 @@ The `vulnerabilities/` subdirectory implements a NixOS vulnerability scanner wit
 ## Quick Reference
 
 ```bash
+# Environment variables
+export BIND_ADDRESS=0.0.0.0:8000  # Host and port for the Bottle server
+
 # Enable service
 sudo nixos-rebuild switch
 

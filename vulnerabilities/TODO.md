@@ -62,6 +62,7 @@ The system consists of three logical layers:
 
 1. [x] **Initialize database**: Make sure the database is initialized upon startup of the service.
 2. [x] **Query the database**: Create SELECT-queries with JOINS to get timeseries.
+3. [x] **update_dependency_node**: Implemented for propagating most-critical-child up the tree during scan.
 
 ### Phase 5: Implementation Details
 **Goal:** Concrete code structure and file contents.
