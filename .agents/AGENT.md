@@ -28,6 +28,11 @@ Patterns, misunderstandings, and lessons learned while implementing the vulnerab
 - `ScanPipeline.default()` creates a fully wired pipeline with mock implementations.
 - `ScanPipeline` is constructed with dependency injection — all stages are passed as constructor arguments.
 
+### StorageInterface
+- Now includes `update_dependency_node(id, scan_id=None, package_name=None, drv_path=None, parent_id=None, child_id=None, vulnerability_event_id=None)` abstract method.
+- Used to propagate most-critical-child up the tree during scan.
+- All args except `id` are optional for partial updates.
+
 ### tree_parser format conversion
 - `tree_parser.merge_nix_trees()` returns a wrapper dict with `tree`, `json`, and `ascii` keys.
 - The `tree` key contains nodes with `name` (display text with tree chars) and `str_name` (path) keys.
@@ -37,6 +42,8 @@ Patterns, misunderstandings, and lessons learned while implementing the vulnerab
 ### Normalizer deduplication
 - Merged trees can contain duplicate nodes (same package appearing in multiple paths).
 - `normalizer.py` tracks visited `(pname, drv_path)` tuples to prevent duplicate vulnerability records.
+- Records now include `severity_score` (float, the raw CVSS max score).
+- Internal variable renamed to `vulnerability_events`.
 
 ## Misunderstandings
 
@@ -47,6 +54,12 @@ Patterns, misunderstandings, and lessons learned while implementing the vulnerab
 ### 2. Test import paths
 **Wrong:** `from vulnerabilities.database import ...` (fails when running from `vulnerabilities/` directory)
 **Right:** `from database import ...` (rely on current working directory in sys.path)
+
+### 3. Connection handling in API
+**Right:** Use `with _get_db() as conn:` context manager pattern in api.py
+
+### 4. update_dependency_node signature
+**Right:** All args except `id` are optional for partial updates. Use `None` defaults.
 
 ## Open Questions
 
