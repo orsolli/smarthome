@@ -174,9 +174,9 @@ class StorageInterface(ABC):
     def update_dependency_node(
         self,
         id: int,
-        scan_id: int,
-        package_name: str,
-        drv_path: str,
+        scan_id: int | None = None,
+        package_name: str | None = None,
+        drv_path: str | None = None,
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,

@@ -90,9 +90,9 @@ class MockStorage(StorageInterface):
     def update_dependency_node(
         self,
         id: int,
-        scan_id: int,
-        package_name: str,
-        drv_path: str,
+        scan_id: int | None = None,
+        package_name: str | None = None,
+        drv_path: str | None = None,
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
@@ -100,15 +100,18 @@ class MockStorage(StorageInterface):
         existing = next((n for n in self._nodes if n["id"] == id), None)
         if not existing:
             raise ValueError(f"Node with ID {id} does not exist")
-        existing.update({
-            "id": id,
-            "scan_id": scan_id,
-            "package_name": package_name,
-            "drv_path": drv_path,
-            "parent_id": parent_id,
-            "child_id": child_id,
-            "vulnerability_event_id": vulnerability_event_id,
-        })
+        if scan_id is not None:
+            existing["scan_id"] = scan_id
+        if package_name is not None:
+            existing["package_name"] = package_name
+        if drv_path is not None:
+            existing["drv_path"] = drv_path
+        if parent_id is not None:
+            existing["parent_id"] = parent_id
+        if child_id is not None:
+            existing["child_id"] = child_id
+        if vulnerability_event_id is not None:
+            existing["vulnerability_event_id"] = vulnerability_event_id
         return id
 
 
@@ -262,25 +265,28 @@ class ScanPipeline:
         tree: dict,
         vuln_events: dict[str, Any],
         parent_id: int | None = None,
-    ) -> None:
+    ) -> dict[str, Any]:
         """Recursively store dependency tree nodes in storage.
 
         Args:
             scan_id: The scan ID.
             tree: The dependency tree dict.
             vuln_events: Vulnerability events.
+
+        Returns:
+            Dict with node id and severity_score.
         """
         pname = tree.get("pname", tree.get("name", ""))
         drv_path = tree.get("drv_path", "")
         if not pname and not drv_path:
-            return
+            return {"id": 0, "severity_score": 0}
 
         node_id = self.storage.insert_dependency_node(
             scan_id,
             pname or drv_path,
             drv_path,
             parent_id=parent_id,
-            vulnerability_event_id=vuln_events.get(drv_path).get("event_id") if vuln_events.get(drv_path) else None,
+            vulnerability_event_id=vuln_events.get(drv_path, {}).get("event_id"),
         )
 
         severity_score = vuln_events.get(drv_path, {}).get("severity_score", 0)
@@ -292,7 +298,9 @@ class ScanPipeline:
                 severity_score = node["severity_score"]
                 child_id = node["id"]
         if child_id:
-            self.storage.update_dependency_node(node_id, child_id=child_id)
+            self.storage.update_dependency_node(
+                node_id, scan_id, pname or drv_path, drv_path, child_id=child_id
+            )
 
         return {
             "id": node_id,

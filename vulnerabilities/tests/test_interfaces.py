@@ -5,6 +5,7 @@ import unittest
 from interfaces import (
     DependencyMapperInterface,
     DerivationSourceInterface,
+    StorageInterface,
     TreeMergerInterface,
     TreeNormalizerInterface,
     VulnerabilityScannerInterface,
@@ -74,6 +75,31 @@ class TestTreeNormalizerInterface(unittest.TestCase):
     def test_has_normalize(self):
         """TreeNormalizer defines normalize method."""
         self.assertTrue(hasattr(TreeNormalizerInterface, "normalize"))
+
+
+class TestStorageInterface(unittest.TestCase):
+    """Test that StorageInterface is an abstract base class."""
+
+    def test_is_abstract(self):
+        """StorageInterface cannot be instantiated directly."""
+        with self.assertRaises(TypeError):
+            StorageInterface()
+
+    def test_has_insert_scan(self):
+        """StorageInterface defines insert_scan method."""
+        self.assertTrue(hasattr(StorageInterface, "insert_scan"))
+
+    def test_has_insert_vulnerability_event(self):
+        """StorageInterface defines insert_vulnerability_event method."""
+        self.assertTrue(hasattr(StorageInterface, "insert_vulnerability_event"))
+
+    def test_has_insert_dependency_node(self):
+        """StorageInterface defines insert_dependency_node method."""
+        self.assertTrue(hasattr(StorageInterface, "insert_dependency_node"))
+
+    def test_has_update_dependency_node(self):
+        """StorageInterface defines update_dependency_node method."""
+        self.assertTrue(hasattr(StorageInterface, "update_dependency_node"))
 
 
 if __name__ == "__main__":
