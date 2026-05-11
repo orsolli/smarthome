@@ -9,6 +9,7 @@ from core.database import (
     insert_scan,
     insert_vulnerability_event,
     insert_dependency_node,
+    update_dependency_node,
     get_vulnerabilities_since,
     get_dependency_tree_for_scan,
 )
@@ -93,6 +94,52 @@ class TestDatabase(unittest.TestCase):
         self.assertEqual(len(tree), 1)
         self.assertEqual(tree[0]["package_name"], "nixos-system")
         self.assertEqual(tree[0]["drv_path"], "/nix/store/system.drv")
+
+
+class TestUpdateDependencyNode(unittest.TestCase):
+    def setUp(self):
+        self.db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db_path = self.db_file.name
+        self.db_file.close()
+        self.conn = init_db(self.db_path)
+
+    def tearDown(self):
+        self.conn.close()
+        os.unlink(self.db_path)
+
+    def test_update_raises_for_nonexistent_id(self):
+        """update_dependency_node raises ValueError for non-existent ID."""
+        scan_id = insert_scan(self.conn, "/run/current-system")
+        with self.assertRaises(ValueError):
+            update_dependency_node(self.conn, 999, scan_id, "pkg", "/drv")
+
+    def test_update_updates_all_fields(self):
+        """update_dependency_node updates all provided fields."""
+        scan_id = insert_scan(self.conn, "/run/current-system")
+        node_id = insert_dependency_node(
+            self.conn, scan_id, "old-pkg", "/nix/store/old.drv"
+        )
+        update_dependency_node(
+            self.conn, node_id, scan_id, "new-pkg", "/nix/store/new.drv"
+        )
+        tree = get_dependency_tree_for_scan(self.conn, scan_id)
+        self.assertEqual(len(tree), 1)
+        self.assertEqual(tree[0]["package_name"], "new-pkg")
+        self.assertEqual(tree[0]["drv_path"], "/nix/store/new.drv")
+
+    def test_update_preserves_unprovided_fields(self):
+        """update_dependency_node preserves fields not provided."""
+        scan_id = insert_scan(self.conn, "/run/current-system")
+        node_id = insert_dependency_node(
+            self.conn, scan_id, "pkg", "/nix/store/p.drv",
+            parent_id=5, child_id=10, vulnerability_event_id=3
+        )
+        update_dependency_node(self.conn, node_id, scan_id, "pkg", "/nix/store/p.drv",
+                               child_id=20)
+        tree = get_dependency_tree_for_scan(self.conn, scan_id)
+        self.assertEqual(tree[0]["parent_id"], 5)
+        self.assertEqual(tree[0]["child_id"], 20)
+        self.assertEqual(tree[0]["vulnerability_event_id"], 3)
 
 
 if __name__ == "__main__":

@@ -217,11 +217,12 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
 
         class CustomTreeNormalizer(TreeNormalizerInterface):
             def normalize(self, tree, vuln_map=None):
-                return [{"package_name": "merged", "drv_path": "/nix/store/merged.drv", "severity": "LOW"}]
+                return [{"package_name": "merged", "drv_path": "/nix/store/merged.drv", "severity": "LOW", "severity_score": 0.1}]
 
         class CustomStorage(StorageInterface):
             def __init__(self):
                 self._next = 1
+                self._nodes = []
             def _next_id(self):
                 current = self._next
                 self._next += 1
@@ -231,7 +232,20 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
             def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity):
                 return self._next_id()
             def insert_dependency_node(self, scan_id, package_name, drv_path, parent_id=None, child_id=None, vulnerability_event_id=None):
-                return self._next_id()
+                node_id = self._next_id()
+                self._nodes.append({"id": node_id, "scan_id": scan_id, "package_name": package_name})
+                return node_id
+            def update_dependency_node(self, id, scan_id=None, package_name=None, drv_path=None, parent_id=None, child_id=None, vulnerability_event_id=None):
+                for node in self._nodes:
+                    if node["id"] == id:
+                        if scan_id is not None:
+                            node["scan_id"] = scan_id
+                        if package_name is not None:
+                            node["package_name"] = package_name
+                        if child_id is not None:
+                            node["child_id"] = child_id
+                        return id
+                raise ValueError(f"Node with ID {id} does not exist")
 
         pipeline = ScanPipeline(
             derivation_source=CustomDerivationSource(),
