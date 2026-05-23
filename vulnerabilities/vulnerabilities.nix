@@ -5,6 +5,8 @@ pkgs.python3Packages.buildPythonApplication {
   format = "pyproject";
   src = ./.;
 
+  nativeCheckInputs = [ pkgs.python3Packages.pytestCheckHook ];
+
   propagatedBuildInputs = with pkgs.python3Packages; [
     bottle
     setuptools
