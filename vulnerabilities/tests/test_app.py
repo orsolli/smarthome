@@ -12,10 +12,11 @@ class TestRunScan(unittest.TestCase):
     """Tests for the run_scan function using the new ScanPipeline."""
 
     def setUp(self):
-        from app import app
         self.db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
         self.db_path = self.db_file.name
         self.db_file.close()
+        os.environ["DATABASE_PATH"] = self.db_path
+        from app import app
         app.DB_PATH = self.db_path
         # Replace pipeline storage with real database storage
         app.pipeline.storage = app.DatabaseStorage(self.db_path)
