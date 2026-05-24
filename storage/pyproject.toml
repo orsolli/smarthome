@@ -11,7 +11,7 @@ dependencies = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*", "core*"]
+include = ["app*", "core*", "frontend*"]
 exclude = ["docs*", "tests*"]
 
 [project.scripts]

@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 
 from bottle import Bottle, run  # type: ignore
+from frontend import home
+from core.database import Database
 
 
 app = Bottle()
@@ -26,6 +28,24 @@ def health_endpoint():
         JSON health status.
     """
     return {"status": "ok"}
+
+
+@app.get("/")
+def home_endpoint():
+    return home.root()
+
+
+@app.get("/get_filesystems")
+def get_filesystems_endpoint():
+    return home.get_filesystems(Database(DB_PATH).get_filesystems())
+
+
+@app.get("/get_usage_history/")
+@app.get("/get_usage_history/<mounted_on:path>")
+def get_usage_history_endpoint(mounted_on="/"):
+    mounted_on = "/" + mounted_on.strip("/")  # Ensure it starts with "/"
+    print(f"Received request for usage history of mounted_on: {mounted_on}")
+    return home.get_usage_history(mounted_on, Database(DB_PATH).get_usage_history(mounted_on))
 
 
 def main():

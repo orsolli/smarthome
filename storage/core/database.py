@@ -44,3 +44,47 @@ class Database:
             return {"error": str(e)}
         finally:
             self.conn.close()
+
+    def get_filesystems(self):
+        """Fetch all filesystems from the database."""
+        try:
+            self.cursor.execute('SELECT DISTINCT mounted_on FROM disk_usage')
+            rows = self.cursor.fetchall()
+            filesystems = []
+            for row in rows:
+                filesystems.append({
+                    "mounted_on": row[0],
+                })
+            return filesystems
+        except sqlite3.Error as e:
+            logger.error(f"Database error: {e}")
+            return {"error": str(e)}
+        finally:
+            self.conn.close()
+
+    def get_usage_history(self, mounted_on):
+        """Fetches the usage history for a given filesystem."""
+        try:
+            self.cursor.execute('''
+                SELECT timestamp, total_bytes, used_bytes, available_bytes 
+                FROM disk_usage 
+                WHERE mounted_on = ?
+                AND total_bytes > 0
+                AND timestamp > datetime('now', '-7 days')
+                ORDER BY timestamp ASC
+            ''', (mounted_on,))
+            rows = self.cursor.fetchall()
+            usage_history = []
+            for row in rows:
+                usage_history.append({
+                    "timestamp": row[0],
+                    "total_bytes": row[1],
+                    "used_bytes": row[2],
+                    "available_bytes": row[3],
+                })
+            return usage_history
+        except sqlite3.Error as e:
+            logger.error(f"Database error: {e}")
+            return {"error": str(e)}
+        finally:
+            self.conn.close()
