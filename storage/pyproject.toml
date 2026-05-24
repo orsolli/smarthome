@@ -7,10 +7,11 @@ name = "storage"
 version = "0.1"
 dependencies = [
     "bottle",
+    "psutil",
 ]
 
 [tool.setuptools.packages.find]
-include = ["app*"]
+include = ["app*", "core*"]
 exclude = ["docs*", "tests*"]
 
 [project.scripts]

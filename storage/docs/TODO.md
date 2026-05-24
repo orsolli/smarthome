@@ -14,33 +14,11 @@ A task that does not require any more work must be marked as completed. The sub-
 
 ## Tasks
 
-- [/] **Scaffold**:
+- [x] **Scaffold**:
     Establish the initial storage package scaffold
-    - [x] **Add TODO.md**:
-        Add a TODO.md file to describe what needs to be done
-    - [x] **Entrypoint scaffold**:
-        Add executable entrypoints `storage-web` and `storage-scanner` in `pyproject.toml` and provide initial implementations in `app/web.py` and `app/scanner.py`.
-    - [x] **Test scaffold**:
-        Add baseline automated test coverage: create `tests/test_app.py` to verify `GET /health` returns HTTP 200 and `{"status":"ok"}`.
-    - [/] **Nix scaffold**:
-        Define packaging and deployment wiring
-        - [x] **storage.nix**:
-            Add `storage.nix` to build the python application
-        - [x] **default.nix**:
-            Add `default.nix` with `storage-web` service + `storage-scan` timer configuration and required environment variables.
-        - [/] **root module**:
-            Include the storage module to the smarthome repository root module at `../default.nix` (relative to storage/default.nix)
-- [ ] **Implement storage monitor**:
+- [/] **Implement storage monitor**:
     Implement storage monitor that tracks the disk usage over time
-    - [ ] **Implement scanner**:
+    - [x] **Implement scanner**:
         Implement `storage-scanner`, parse the output, and append a row to the SQLite database at `DATABASE_PATH`.
-        - [ ] **Scan filesystems**:
-            Write the code for scanning the disk usage of all filesystems
-            - [ ] **Test fs-scanner**:
-                Write a test that test that a function returns an object with `filesystem`, `used` and `available`
-            - [ ] **Write fs-scanner**:
-                Write a function that passes the test
-        - [ ] **Store scan-result**:
-            Write the code for storing a scan into a database
     - [ ] **Implement frontend**:
         Implement an endpoint in `storage-web` that queries the database and returns historical disk usage data.
