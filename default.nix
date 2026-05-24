@@ -10,6 +10,7 @@ in
     ./read_waveplus
     ./timeseries_plot
     ./read_han
+    ./storage
   ];
 
   options = {

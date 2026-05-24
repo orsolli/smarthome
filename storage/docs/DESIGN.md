@@ -20,3 +20,6 @@ Start a service that executes bin/storage-web to host the web-server providing e
 *   `storage/tests/` — All tests should be stored in this test-folder
 *   `storage/app/` — All python entrypoints should be stored inside this app-folder
 *   `storage/docs/` — All documentation should be stored inside this docs-folder
+
+## Principles
+Files should be small and implementation details should be abstracted away from the relevant files. This is to reduce the context size needed to understand most of the system.

@@ -3,7 +3,7 @@ This is a storage monitor that tracks the disk usage over time and provides a vi
 
 ## Getting Started
 ### Installation
-To install this package using nix, run `nix-build storage.nix` and run the scanner `DATABASE_PATH=./storage.sqlite DF_PATH=$(which df) result/bin/storage-scanner`
+To install this package using nix, run `nix-build storage.nix` and run the scanner `DATABASE_PATH=./storage.sqlite result/bin/storage-scanner`
 
 After a scan, you can start the web-server to serve a visual dashboard `DATABASE_PATH=./storage.sqlite BIND_ADDRESS=0.0.0.0 result/bin/storage-web`
 

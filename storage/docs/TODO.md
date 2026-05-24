@@ -28,11 +28,19 @@ A task that does not require any more work must be marked as completed. The sub-
             Add `storage.nix` to build the python application
         - [x] **default.nix**:
             Add `default.nix` with `storage-web` service + `storage-scan` timer configuration and required environment variables.
-        - [ ] **root module**:
+        - [/] **root module**:
             Include the storage module to the smarthome repository root module at `../default.nix` (relative to storage/default.nix)
 - [ ] **Implement storage monitor**:
     Implement storage monitor that tracks the disk usage over time
     - [ ] **Implement scanner**:
-        Implement `storage-scanner` to call `df` (via `DF_PATH` env var), parse the output, and append a row to the SQLite database at `DATABASE_PATH`.
+        Implement `storage-scanner`, parse the output, and append a row to the SQLite database at `DATABASE_PATH`.
+        - [ ] **Scan filesystems**:
+            Write the code for scanning the disk usage of all filesystems
+            - [ ] **Test fs-scanner**:
+                Write a test that test that a function returns an object with `filesystem`, `used` and `available`
+            - [ ] **Write fs-scanner**:
+                Write a function that passes the test
+        - [ ] **Store scan-result**:
+            Write the code for storing a scan into a database
     - [ ] **Implement frontend**:
         Implement an endpoint in `storage-web` that queries the database and returns historical disk usage data.
