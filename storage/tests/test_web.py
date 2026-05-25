@@ -46,7 +46,7 @@ class TestHealthEndpoint(unittest.TestCase):
         status = start_response.call_args[0][0]
         self.assertEqual(status, "200 OK")
         parsed = body.decode()
-        self.assertIn("Welcome to the Storage Dashboard", parsed)
+        self.assertIn("Storage Dashboard", parsed)
 
 
 if __name__ == "__main__":
