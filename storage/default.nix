@@ -68,7 +68,7 @@ in
       timerConfig = {
         Unit = "storage-scan.service";
         OnBootSec = "5min"; # Start 5 minutes after boot
-        OnUnitActiveSec = "1h"; # Run every hour after the last execution finishes
+        OnUnitActiveSec = "1min"; # Run every minute after the last execution finishes
       };
     };
   };

@@ -13,7 +13,7 @@ _safeId_func = """
 def root():
     return """
     <!DOCTYPE html>
-    <html lang="en" data-theme="light">
+    <html lang="en" data-theme="dark">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -349,7 +349,7 @@ def root():
                             if (statsDiv) {
                                 statsDiv.innerHTML = `
                                     <span>Used: ${formatBytes(latest.used_bytes ?? latest.close_bytes)}</span>
-                                    <span>Free: ${formatBytes(latest.available_bytes ?? 0)}</span>
+                                    <span>Free: ${formatBytes(latest.available_bytes ?? (latest.total_bytes - latest.close_bytes))}</span>
                                     <span>Total: ${formatBytes(latest.total_bytes)}</span>
                                 `;
                                 // Update usage bar
