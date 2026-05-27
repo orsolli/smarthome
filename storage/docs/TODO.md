@@ -16,11 +16,7 @@ A task that does not require any more work must be marked as completed. The sub-
 
 - [x] **Scaffold**:
     Establish the initial storage package scaffold
-- [/] **Implement storage monitor**:
+- [X] **Implement storage monitor**:
     Implement storage monitor that tracks the disk usage over time
-    - [x] **Implement scanner**:
-        Implement `storage-scanner`, parse the output, and append a row to the SQLite database at `DATABASE_PATH`.
-    - [/] **Implement frontend**:
-        Implement an endpoint in `storage-web` that queries the database and returns historical disk usage data.
-        - [ ] **Styling**:
-            Make it pretty
+- [ ] **Sort pinned**:
+    Pinned filesystems should be moved to the top
