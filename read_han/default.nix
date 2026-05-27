@@ -10,7 +10,7 @@ in
     services.smarthome.han = {
       enable = mkOption {
         type = types.bool;
-        default = cfg.enable;
+        default = false;
         description = "Enable the HAN data collection service.";
       };
 

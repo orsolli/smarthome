@@ -10,7 +10,7 @@ in
     services.smarthome.timeseries_plot = {
       enable = mkOption {
         type = types.bool;
-        default = cfg.enable;
+        default = false;
         description = "Enable the smarthome service.";
       };
 
@@ -28,7 +28,7 @@ in
     };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.timeseries_plot.enable {
     systemd.services.airwave-web = {
       description = "Airwave Plus Web Service";
       after = [ "network.target" ];

@@ -1,0 +1,19 @@
+[build-system]
+requires = [ "setuptools" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "storage"
+version = "0.1"
+dependencies = [
+    "bottle",
+    "psutil",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "core*", "frontend*"]
+exclude = ["docs*", "tests*"]
+
+[project.scripts]
+storage-web = "app.web:main"
+storage-scanner = "app.scanner:main"

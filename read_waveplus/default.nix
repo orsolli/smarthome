@@ -10,7 +10,7 @@ in
     services.smarthome.airwave = {
       enable = mkOption {
         type = types.bool;
-        default = cfg.enable;
+        default = false;
         description = "Enable the Airwave Plus data collection service.";
       };
 
