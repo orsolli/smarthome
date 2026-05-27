@@ -320,12 +320,13 @@ def root():
         }
 
         function renderCards() {
+            const prefs = getPrefs();
             const cards = document.querySelectorAll('.fs-card');
             cards.forEach(card => {
                 const mountedOn = card.dataset.mountedOn;
                 const chartContainerId = `chart-${_safeId(mountedOn)}`;
                 const chartDiv = document.getElementById(chartContainerId);
-                if (!chartDiv) return;
+                if (!chartDiv || prefs.hidden.includes(card.dataset.mountedOn)) return;
                 const resolution = card.dataset.resolution || 'low';
                 const range = resolution === 'high' ? '1w' : '1y';
 
