@@ -16,7 +16,9 @@ A task that does not require any more work must be marked as completed. The sub-
 
 - [x] **Scaffold**:
     Establish the initial storage package scaffold
-- [X] **Implement storage monitor**:
+- [x] **Implement storage monitor**:
     Implement storage monitor that tracks the disk usage over time
 - [ ] **Sort pinned**:
     Pinned filesystems should be moved to the top
+- [x] **Compress data**:
+    This service itself should not be the sole cause of filling the filesystems

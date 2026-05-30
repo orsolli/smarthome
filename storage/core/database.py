@@ -22,21 +22,61 @@ class Database:
         self.conn.commit()
 
     def store(self, records):
-        """Insert into SQLite."""
+        """Insert or update disk usage records."""
+        if not records:
+            return {"success": 0}
+
+        # If no match or if there are multiple records to insert, proceed with insertion
         try:
             for record in records:
+                mounted_on = record["mounted_on"]
+                
+                # Check the last two records for potential duplicates
                 self.cursor.execute('''
-                    INSERT INTO disk_usage 
-                    (filesystem, total_bytes, used_bytes, available_bytes, mounted_on)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (
+                    SELECT id, timestamp, filesystem, total_bytes, used_bytes, available_bytes, mounted_on
+                    FROM disk_usage
+                    WHERE mounted_on = ?
+                    ORDER BY timestamp DESC
+                    LIMIT 2
+                ''', (mounted_on,))
+                last_records = self.cursor.fetchall()
+
+                # Define the data fields to compare (excluding timestamp)
+                current_data = (
                     record["filesystem"],
                     record["total_bytes"],
                     record["used_bytes"],
                     record["available_bytes"],
                     record["mounted_on"],
-                ))
-            self.conn.commit()
+                )
+
+                # Check if the current record matches the last record
+                if (
+                    last_records
+                    and len(last_records) == 2
+                    and last_records[0][2:] == current_data
+                    and last_records[1][2:] == current_data
+                ):
+                    # Match found: Update the timestamp of the last record
+                    last_record_id = last_records[0][0]
+                    self.cursor.execute('''
+                        UPDATE disk_usage 
+                        SET timestamp = datetime('now')
+                        WHERE id = ?
+                    ''', (last_record_id,))
+                else:
+                    self.cursor.execute('''
+                        INSERT INTO disk_usage 
+                        (filesystem, total_bytes, used_bytes, available_bytes, mounted_on)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (
+                        record["filesystem"],
+                        record["total_bytes"],
+                        record["used_bytes"],
+                        record["available_bytes"],
+                        record["mounted_on"],
+                    ))
+                self.conn.commit()
             return {"success": self.cursor.rowcount}
         except sqlite3.Error as e:
             logger.error(f"Database error: {e}")
