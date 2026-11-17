@@ -1,14 +1,21 @@
 """Database schema and initialization for vulnerability tracking.
 
 Tables:
-    scans: Scan metadata (timestamp, target, etc.)
+    scans: Scan metadata (timestamp, target)
     vulnerability_events: Time-series vulnerability records
     dependency_tree: Structural dependency mapping per scan
+
+A node's identity across scans is carried by `package_name`, `version` and
+`lineage` (see core/identity.py). `drv_path` contains a store hash that changes
+with every rebuild, so it is only unique inside a single scan; the `target` of a
+scan is what groups scans of the same machine or build together.
 """
 
 import sqlite3
 from datetime import datetime
 from typing import Any
+
+from core.identity import compressed_lineages, version_from_drv
 
 
 SCHEMA_SQL = """
@@ -22,6 +29,7 @@ CREATE TABLE IF NOT EXISTS vulnerability_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     scan_id INTEGER NOT NULL,
     package_name TEXT NOT NULL,
+    version TEXT,
     drv_path TEXT NOT NULL,
     severity TEXT NOT NULL,
     timestamp TEXT NOT NULL,
@@ -33,6 +41,8 @@ CREATE TABLE IF NOT EXISTS dependency_tree (
     scan_id INTEGER NOT NULL,
     vulnerability_event_id INTEGER,
     package_name TEXT NOT NULL,
+    version TEXT,
+    lineage TEXT,
     drv_path TEXT NOT NULL,
     parent_id INTEGER,
     child_id INTEGER,
@@ -43,9 +53,33 @@ CREATE TABLE IF NOT EXISTS dependency_tree (
 );
 """
 
+# Columns added to databases created before cross-scan node identity existed.
+ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "vulnerability_events": {"version": "TEXT"},
+    "dependency_tree": {"version": "TEXT", "lineage": "TEXT"},
+}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns that older databases are missing."""
+    for table, columns in ADDED_COLUMNS.items():
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for column, definition in columns.items():
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tree_scan ON dependency_tree(scan_id)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tree_lineage ON dependency_tree(lineage)"
+    )
+    conn.commit()
+
 
 def init_db(db_path: str) -> sqlite3.Connection:
     """Initialize the database and return a connection.
+
+    Existing databases are migrated in place: the version and lineage columns
+    are added when absent.
 
     Args:
         db_path: Path to the SQLite database file.
@@ -55,6 +89,7 @@ def init_db(db_path: str) -> sqlite3.Connection:
     """
     conn = sqlite3.connect(db_path)
     conn.executescript(SCHEMA_SQL)
+    _migrate(conn)
     conn.commit()
     return conn
 
@@ -83,6 +118,7 @@ def insert_vulnerability_event(
     package_name: str,
     drv_path: str,
     severity: str,
+    version: str | None = None,
 ) -> int:
     """Insert a vulnerability event and return its ID.
 
@@ -92,13 +128,19 @@ def insert_vulnerability_event(
         package_name: Package name (e.g. 'Diff').
         drv_path: Nix derivation path.
         severity: Severity level (e.g. 'CRITICAL').
+        version: Version of the vulnerable derivation. Derived from drv_path
+            when omitted.
 
     Returns:
         The ID of the inserted event.
     """
+    if version is None:
+        version = version_from_drv(drv_path, package_name)
     cursor = conn.execute(
-        "INSERT INTO vulnerability_events (scan_id, package_name, drv_path, severity, timestamp) VALUES (?, ?, ?, ?, ?)",
-        (scan_id, package_name, drv_path, severity, datetime.utcnow().isoformat()),
+        """INSERT INTO vulnerability_events
+           (scan_id, package_name, version, drv_path, severity, timestamp)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (scan_id, package_name, version, drv_path, severity, datetime.utcnow().isoformat()),
     )
     conn.commit()
     return cursor.lastrowid or 0
@@ -112,6 +154,8 @@ def insert_dependency_node(
     parent_id: int | None = None,
     child_id: int | None = None,
     vulnerability_event_id: int | None = None,
+    version: str | None = None,
+    lineage: str | None = None,
 ) -> int:
     """Insert a dependency tree node and return its ID.
 
@@ -123,18 +167,33 @@ def insert_dependency_node(
         parent_id: Optional parent node ID.
         child_id: Optional child node ID.
         vulnerability_event_id: Optional linked vulnerability event ID.
+        version: Version of this derivation, used for cross-scan matching.
+        lineage: Compressed lineage path, used for cross-scan matching.
 
     Returns:
         The ID of the inserted node.
     """
+    if version is None:
+        version = version_from_drv(drv_path, package_name)
     cursor = conn.execute(
         """INSERT INTO dependency_tree
-           (scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id)
-           VALUES (?, ?, ?, ?, ?, ?)""",
-        (scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id),
+           (scan_id, package_name, version, lineage, drv_path, parent_id,
+            child_id, vulnerability_event_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            scan_id,
+            package_name,
+            version,
+            lineage,
+            drv_path,
+            parent_id,
+            child_id,
+            vulnerability_event_id,
+        ),
     )
     conn.commit()
     return cursor.lastrowid or 0
+
 
 def update_dependency_node(
     conn: sqlite3.Connection,
@@ -145,6 +204,8 @@ def update_dependency_node(
     parent_id: int | None = None,
     child_id: int | None = None,
     vulnerability_event_id: int | None = None,
+    version: str | None = None,
+    lineage: str | None = None,
 ) -> int:
     """Update a dependency tree node and return its ID.
 
@@ -157,28 +218,118 @@ def update_dependency_node(
         parent_id: Optional parent node ID.
         child_id: Optional child node ID.
         vulnerability_event_id: Optional linked vulnerability event ID.
+        version: Version of this derivation.
+        lineage: Compressed lineage path.
 
     Returns:
         The ID of the updated node.
     """
-    existing = conn.execute("SELECT scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id FROM dependency_tree WHERE id = ?", (id,)).fetchone()
+    existing = conn.execute(
+        """SELECT scan_id, package_name, version, lineage, drv_path, parent_id,
+                  child_id, vulnerability_event_id
+           FROM dependency_tree WHERE id = ?""",
+        (id,),
+    ).fetchone()
     if not existing:
         raise ValueError(f"Node with ID {id} does not exist")
-    existing_scan_id, existing_package_name, existing_drv_path, existing_parent_id, existing_child_id, existing_vuln_event_id = existing[0:6]
-    scan_id = existing_scan_id if scan_id is None else scan_id
-    package_name = existing_package_name if package_name is None else package_name
-    drv_path = existing_drv_path if drv_path is None else drv_path
-    parent_id = existing_parent_id if parent_id is None else parent_id
-    child_id = existing_child_id if child_id is None else child_id
-    vulnerability_event_id = existing_vuln_event_id if vulnerability_event_id is None else vulnerability_event_id
+
+    scan_id = existing[0] if scan_id is None else scan_id
+    package_name = existing[1] if package_name is None else package_name
+    version = existing[2] if version is None else version
+    lineage = existing[3] if lineage is None else lineage
+    drv_path = existing[4] if drv_path is None else drv_path
+    parent_id = existing[5] if parent_id is None else parent_id
+    child_id = existing[6] if child_id is None else child_id
+    vulnerability_event_id = (
+        existing[7] if vulnerability_event_id is None else vulnerability_event_id
+    )
+
     cursor = conn.execute(
         """UPDATE dependency_tree
-           SET scan_id = ?, package_name = ?, drv_path = ?, parent_id = ?, child_id = ?, vulnerability_event_id = ?
+           SET scan_id = ?, package_name = ?, version = ?, lineage = ?,
+               drv_path = ?, parent_id = ?, child_id = ?, vulnerability_event_id = ?
            WHERE id = ?""",
-        (scan_id, package_name, drv_path, parent_id, child_id, vulnerability_event_id, id),
+        (
+            scan_id,
+            package_name,
+            version,
+            lineage,
+            drv_path,
+            parent_id,
+            child_id,
+            vulnerability_event_id,
+            id,
+        ),
     )
     conn.commit()
     return cursor.lastrowid or 0
+
+
+def backfill_identities(conn: sqlite3.Connection) -> int:
+    """Fill version and lineage for rows written before node identity existed.
+
+    Idempotent: only rows with a NULL lineage or version are touched.
+
+    Args:
+        conn: Database connection.
+
+    Returns:
+        Number of scans whose tree was backfilled.
+    """
+    scan_ids = [
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT scan_id FROM dependency_tree WHERE lineage IS NULL"
+        ).fetchall()
+    ]
+    for scan_id in scan_ids:
+        target = conn.execute(
+            "SELECT target FROM scans WHERE id = ?", (scan_id,)
+        ).fetchone()
+        nodes = get_dependency_tree_for_scan(conn, scan_id)
+        lineages = compressed_lineages(nodes, target[0] if target else "")
+        for node in nodes:
+            conn.execute(
+                "UPDATE dependency_tree SET version = ?, lineage = ? WHERE id = ?",
+                (
+                    node["version"] or version_from_drv(node["drv_path"], node["package_name"]),
+                    lineages[node["id"]],
+                    node["id"],
+                ),
+            )
+    conn.commit()
+
+    for drv_path, package_name in conn.execute(
+        "SELECT drv_path, package_name FROM vulnerability_events WHERE version IS NULL"
+    ).fetchall():
+        conn.execute(
+            "UPDATE vulnerability_events SET version = ? WHERE drv_path = ? AND package_name = ?",
+            (version_from_drv(drv_path, package_name), drv_path, package_name),
+        )
+    conn.commit()
+    return len(scan_ids)
+
+
+def get_scans_for_target(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any]]:
+    """Get every scan of the target the given scan belongs to, oldest first.
+
+    Args:
+        conn: Database connection.
+        scan_id: Scan whose target to look up.
+
+    Returns:
+        List of dicts with keys: id, timestamp, target.
+    """
+    cursor = conn.execute(
+        """SELECT id, timestamp, target
+           FROM scans
+           WHERE target = (SELECT target FROM scans WHERE id = ?)
+           ORDER BY timestamp""",
+        (scan_id,),
+    )
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    return [dict(zip(columns, row)) for row in rows]
 
 
 def get_vulnerabilities_since(
@@ -196,7 +347,7 @@ def get_vulnerabilities_since(
     """
     if until:
         cursor = conn.execute(
-            """SELECT v.id, v.package_name, v.drv_path, v.severity,
+            """SELECT v.id, v.package_name, v.version, v.drv_path, v.severity,
                       s.timestamp, s.target
                FROM vulnerability_events v
                JOIN scans s ON v.scan_id = s.id
@@ -206,7 +357,7 @@ def get_vulnerabilities_since(
         )
     else:
         cursor = conn.execute(
-            """SELECT v.id, v.package_name, v.drv_path, v.severity,
+            """SELECT v.id, v.package_name, v.version, v.drv_path, v.severity,
                       s.timestamp, s.target
                FROM vulnerability_events v
                JOIN scans s ON v.scan_id = s.id
@@ -231,7 +382,8 @@ def get_dependency_tree_for_scan(conn: sqlite3.Connection, scan_id: int) -> list
         List of dependency tree nodes.
     """
     cursor = conn.execute(
-        """SELECT id, scan_id, vulnerability_event_id, package_name, drv_path, parent_id, child_id
+        """SELECT id, scan_id, vulnerability_event_id, package_name, version,
+                  lineage, drv_path, parent_id, child_id
            FROM dependency_tree
            WHERE scan_id = ?""",
         (scan_id,),

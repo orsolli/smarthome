@@ -12,6 +12,8 @@ from core.database import (
     update_dependency_node,
     get_vulnerabilities_since,
     get_dependency_tree_for_scan,
+    get_scans_for_target,
+    backfill_identities,
 )
 
 
@@ -140,6 +142,79 @@ class TestUpdateDependencyNode(unittest.TestCase):
         self.assertEqual(tree[0]["parent_id"], 5)
         self.assertEqual(tree[0]["child_id"], 20)
         self.assertEqual(tree[0]["vulnerability_event_id"], 3)
+
+
+class TestNodeIdentity(unittest.TestCase):
+    """Version, lineage and target scoping written by the database layer."""
+
+    HASH = "abcdefghijklmnopqrstuvwxyz01234567"
+
+    def setUp(self):
+        self.db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db_path = self.db_file.name
+        self.db_file.close()
+        self.conn = init_db(self.db_path)
+
+    def tearDown(self):
+        self.conn.close()
+        os.unlink(self.db_path)
+
+    def test_version_is_derived_from_the_drv_path(self):
+        scan_id = insert_scan(self.conn, "/run/current-system")
+        node_id = insert_dependency_node(
+            self.conn,
+            scan_id,
+            "glibc-2.42",
+            f"/nix/store/{self.HASH}-glibc-9.99-11.drv",
+        )
+        node = get_dependency_tree_for_scan(self.conn, scan_id)[0]
+        self.assertEqual(node["version"], "9.99-11")
+        self.assertEqual(node["lineage"], None)
+        self.assertEqual(node["id"], node_id)
+
+    def test_scans_are_grouped_by_target(self):
+        a = insert_scan(self.conn, "/run/current-system")
+        insert_scan(self.conn, "./result")
+        b = insert_scan(self.conn, "/run/current-system")
+        scans = get_scans_for_target(self.conn, a)
+        self.assertEqual([scan["id"] for scan in scans], [a, b])
+        self.assertEqual(scans[0]["target"], "/run/current-system")
+
+    def test_backfill_computes_lineages_for_legacy_rows(self):
+        """Rows written before node identity existed get version and lineage."""
+        scan_id = insert_scan(self.conn, "/run/current-system")
+        root = insert_dependency_node(
+            self.conn, scan_id, "nixos-system", "/nix/store/system.drv"
+        )
+        stdenv = insert_dependency_node(
+            self.conn, scan_id, "stdenv-linux", "/nix/store/stdenv.drv", parent_id=root
+        )
+        gcc = insert_dependency_node(
+            self.conn, scan_id, "gcc", f"/nix/store/{self.HASH}-gcc-4.6.4.drv",
+            parent_id=stdenv,
+        )
+        insert_vulnerability_event(
+            self.conn, scan_id, "gcc", f"/nix/store/{self.HASH}-gcc-4.6.4.drv", "HIGH"
+        )
+
+        filled = backfill_identities(self.conn)
+        self.assertEqual(filled, 1)
+
+        nodes = {n["id"]: n for n in get_dependency_tree_for_scan(self.conn, scan_id)}
+        self.assertEqual(nodes[root]["lineage"], "/run/current-system")
+        self.assertEqual(nodes[stdenv]["lineage"], "/run/current-system/stdenv-linux")
+        self.assertEqual(nodes[gcc]["lineage"], "/run/current-system/stdenv-linux/gcc")
+        self.assertEqual(nodes[gcc]["version"], "4.6.4")
+
+        event = self.conn.execute(
+            "SELECT version FROM vulnerability_events WHERE package_name = 'gcc'"
+        ).fetchone()
+        self.assertEqual(event[0], "4.6.4")
+
+        # Idempotent: a second pass changes nothing.
+        self.assertEqual(backfill_identities(self.conn), 0)
+        again = {n["id"]: n for n in get_dependency_tree_for_scan(self.conn, scan_id)}
+        self.assertEqual(again[gcc]["lineage"], nodes[gcc]["lineage"])
 
 
 if __name__ == "__main__":

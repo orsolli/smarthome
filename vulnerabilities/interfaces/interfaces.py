@@ -130,7 +130,12 @@ class StorageInterface(ABC):
 
     @abstractmethod
     def insert_vulnerability_event(
-        self, scan_id: int, package_name: str, drv_path: str, severity: str
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        severity: str,
+        version: str | None = None,
     ) -> int:
         """Insert a vulnerability event and return its ID.
 
@@ -139,6 +144,7 @@ class StorageInterface(ABC):
             package_name: The name of the vulnerable package.
             drv_path: The Nix derivation path.
             severity: The severity level (e.g. 'HIGH').
+            version: Version of the vulnerable derivation.
 
         Returns:
             The ID of the inserted event.
@@ -154,6 +160,8 @@ class StorageInterface(ABC):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         """Insert a node into the dependency tree.
 
@@ -164,6 +172,8 @@ class StorageInterface(ABC):
             parent_id: The ID of the parent node.
             child_id: The ID of the child node.
             vulnerability_event_id: The ID of the linked vulnerability event.
+            version: Version of this derivation.
+            lineage: Compressed lineage path of this node.
 
         Returns:
             The ID of the inserted node.
@@ -180,6 +190,8 @@ class StorageInterface(ABC):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         """Update a node in the dependency tree.
 
@@ -191,6 +203,8 @@ class StorageInterface(ABC):
             parent_id: The ID of the parent node.
             child_id: The ID of the child node.
             vulnerability_event_id: The ID of the linked vulnerability event.
+            version: Version of this derivation.
+            lineage: Compressed lineage path of this node.
 
         Returns:
             The ID of the inserted node.

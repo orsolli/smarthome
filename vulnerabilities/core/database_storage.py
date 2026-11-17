@@ -39,7 +39,12 @@ class DatabaseStorage(StorageInterface):
         return database.insert_scan(self.conn, target)
 
     def insert_vulnerability_event(
-        self, scan_id: int, package_name: str, drv_path: str, severity: str
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        severity: str,
+        version: str | None = None,
     ) -> int:
         """Insert a vulnerability event and return its ID.
 
@@ -48,12 +53,13 @@ class DatabaseStorage(StorageInterface):
             package_name: The name of the vulnerable package.
             drv_path: The Nix derivation path.
             severity: The severity level (e.g. 'HIGH').
+            version: Version of the vulnerable derivation.
 
         Returns:
             The ID of the inserted event.
         """
         return database.insert_vulnerability_event(
-            self.conn, scan_id, package_name, drv_path, severity
+            self.conn, scan_id, package_name, drv_path, severity, version
         )
 
     def insert_dependency_node(
@@ -64,6 +70,8 @@ class DatabaseStorage(StorageInterface):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         """Insert a node into the dependency tree.
 
@@ -74,6 +82,8 @@ class DatabaseStorage(StorageInterface):
             parent_id: The ID of the parent node.
             child_id: The ID of the child node.
             vulnerability_event_id: The ID of the linked vulnerability event.
+            version: Version of this derivation.
+            lineage: Compressed lineage path of this node.
 
         Returns:
             The ID of the inserted node.
@@ -86,6 +96,8 @@ class DatabaseStorage(StorageInterface):
             parent_id=parent_id,
             child_id=child_id,
             vulnerability_event_id=vulnerability_event_id,
+            version=version,
+            lineage=lineage,
         )
 
     def update_dependency_node(
@@ -97,6 +109,8 @@ class DatabaseStorage(StorageInterface):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         return database.update_dependency_node(
             self.conn,
@@ -107,4 +121,6 @@ class DatabaseStorage(StorageInterface):
             parent_id=parent_id,
             child_id=child_id,
             vulnerability_event_id=vulnerability_event_id,
+            version=version,
+            lineage=lineage,
         )
