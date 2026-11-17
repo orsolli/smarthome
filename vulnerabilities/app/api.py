@@ -224,7 +224,8 @@ def _bars_html(
     html = ""
     for node in nodes:
         html += (
-            f'<div id="{_node_id(node["drv_path"])}-timeline" hx-swap-oob="true">'
+            f'<div id="{_node_id(node["drv_path"])}-timeline" class="node-timeline" '
+            'hx-swap-oob="true">'
             f'{mini_bar_html(timelines.get(node["drv_path"], []), start, end)}'
             f"</div>"
         )
