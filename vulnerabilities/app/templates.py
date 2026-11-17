@@ -50,8 +50,11 @@ def base_html(title: str, body: str) -> str:
         .scan-item {{ padding: 4px 8px; font-size: 0.8rem; color: #8b949e; cursor: pointer; border-radius: 4px; }}
         .scan-item:hover, .scan-item.active {{ background: #21262d; color: #58a6ff; }}
         .node-timeline {{ margin: 2px 0 6px 26px; }}
+        .node-timeline:empty {{ display: none; }}
         .node-timeline .chart-bar-label {{ display: none; }}
         .node-timeline .chart-bar-track {{ height: 10px; }}
+        .show-more {{ margin: 6px 0 0 26px; font-size: 0.75rem; color: #58a6ff; background: none; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; cursor: pointer; }}
+        .show-more:hover {{ background: #21262d; }}
     </style>
 </head>
 <body>
@@ -163,12 +166,11 @@ def tree_node_html(
     return html
 
 
-def tree_html(scan_id: int, vuln_map: dict[str, dict]) -> str:
-    """Render the full dependency tree as inner HTML.
+def tree_html(scan_id: int) -> str:
+    """Render the dependency tree container with lazy timeline bars.
 
     Args:
-        scan_id: Scan ID.
-        vuln_map: Dict mapping drv_path to vulnerability info.
+        scan_id: Scan to render.
 
     Returns:
         HTML string for the tree (to be wrapped by base_html).
@@ -188,10 +190,7 @@ function toggleNode(id) {{
         const expanding = !children.classList.contains('expanded');
         children.classList.toggle('expanded');
         if (icon) icon.classList.toggle('expanded');
-        if (expanding) {{
-            const timeline = document.getElementById(id + '-timeline');
-            if (timeline && window.htmx) htmx.trigger(timeline, 'node-expanded');
-        }}
+        if (expanding && window.htmx) htmx.trigger(children, 'node-expanded');
     }}
 }}
 </script>"""

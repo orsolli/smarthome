@@ -16,7 +16,9 @@ from core import timeseries
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 from app.api import (
-    api_node_chart_endpoint,
+    MAX_VISIBLE_CHILDREN,
+    api_bars_endpoint,
+    api_children_endpoint,
     api_scans_endpoint,
     api_tree_endpoint,
     api_vuln_map_endpoint,
@@ -189,10 +191,23 @@ def _api_vuln_map(scan_id: int):
     return api_vuln_map_endpoint(scan_id)
 
 
-@app.get("/api/node-chart/<scan_id:int>/<drv_path:path>")
-def _api_node_chart(scan_id: int, drv_path: str):
-    """HTMX endpoint: inline timeline mini-bar for a tree node's subtree."""
-    return api_node_chart_endpoint(scan_id, drv_path)
+@app.get("/api/bars/<scan_id:int>")
+def _api_bars(scan_id: int):
+    """HTMX endpoint: timeline bars for the roots and their children."""
+    return api_bars_endpoint(scan_id)
+
+
+@app.get("/api/bars/<scan_id:int>/<drv_path:path>")
+def _api_bars_node(scan_id: int, drv_path: str):
+    """HTMX endpoint: timeline bars for a node's children."""
+    return api_bars_endpoint(scan_id, drv_path)
+
+
+@app.get("/api/children/<scan_id:int>/<drv_path:path>")
+def _api_children(scan_id: int, drv_path: str):
+    """HTMX endpoint: children of a node beyond the visible limit."""
+    offset = int(request.query.get("offset", MAX_VISIBLE_CHILDREN))
+    return api_children_endpoint(scan_id, drv_path, offset)
 
 
 @app.get("/scan/<scan_id:int>")

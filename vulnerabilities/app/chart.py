@@ -53,45 +53,31 @@ def _parse_timestamp(ts: str) -> datetime:
         return datetime.min
 
 
-def timeseries_bar_html(
-    package_name: str,
+def _build_segments(
     timeline: list[dict],
     start_time: datetime,
     end_time: datetime,
-) -> str:
-    """Render a single timeline bar for a package.
+) -> list[tuple[str, float, datetime, datetime]]:
+    """Turn scan events into (severity, width_percent, start, end) segments.
 
-    Each segment in the bar represents the time period where the
-    package had a particular severity level: the severity recorded at
-    a scan persists until the next scan changes it. The bar starts
-    clean (NONE) and ends with the last recorded state.
+    The severity recorded at a scan persists until the next scan changes
+    it, so a bar always covers the whole [start_time, end_time] window.
+    Zero-width segments (two scans at the same timestamp) are skipped.
 
     Args:
-        package_name: Package name.
         timeline: List of dicts with keys: timestamp, severity.
         start_time: Chart start time.
         end_time: Chart end time.
 
     Returns:
-        HTML string for the bar.
+        List of (severity, width_percent, segment_start, segment_end).
     """
-    if not timeline:
-        return f"""<div class="chart-bar">
-    <span class="chart-bar-label" title="{package_name}">{package_name}</span>
-    <span class="chart-bar-track">
-        <span class="chart-bar-segment" style="background:#30363d;flex:1;"></span>
-    </span>
-</div>"""
-
     total_seconds = (end_time - start_time).total_seconds()
     if total_seconds <= 0:
         total_seconds = 1
 
     timeline = sorted(timeline, key=lambda x: _parse_timestamp(x.get("timestamp", "")))
 
-    # Build (severity, width_percent) segments: the state recorded at a
-    # scan persists until the next scan. Zero-width segments (two scans
-    # at the same timestamp) are skipped.
     segments: list[tuple[str, float, datetime, datetime]] = []
     prev_time = start_time
     prev_sev = "NONE"
@@ -111,22 +97,81 @@ def timeseries_bar_html(
         width = (end_time - prev_time).total_seconds() / total_seconds * 100
         segments.append((prev_sev, width, prev_time, end_time))
 
-    segments_html = ""
+    return segments
+
+
+def _segments_html(
+    segments: list[tuple[str, float, datetime, datetime]]
+) -> str:
+    """Render timeline segments as span elements."""
+    html = ""
     for sev, width, seg_start, seg_end in segments:
         color = _severity_to_color(sev, SEVERITY_INTENSITY.get(sev, 1.0))
         title = f"{sev} from {seg_start.isoformat()} to {seg_end.isoformat()}"
-        segments_html += (
+        html += (
             f'<span class="chart-bar-segment" '
             f'style="width:{width:.2f}%;background:{color};" '
             f'title="{title}"></span>'
         )
+    return html
+
+
+def timeseries_bar_html(
+    package_name: str,
+    timeline: list[dict],
+    start_time: datetime,
+    end_time: datetime,
+) -> str:
+    """Render a single labelled timeline bar for a package.
+
+    Args:
+        package_name: Package name.
+        timeline: List of dicts with keys: timestamp, severity.
+        start_time: Chart start time.
+        end_time: Chart end time.
+
+    Returns:
+        HTML string for the bar.
+    """
+    if not timeline:
+        return f"""<div class="chart-bar">
+    <span class="chart-bar-label" title="{package_name}">{package_name}</span>
+    <span class="chart-bar-track">
+        <span class="chart-bar-segment" style="background:#30363d;flex:1;"></span>
+    </span>
+</div>"""
 
     return f"""<div class="chart-bar">
     <span class="chart-bar-label" title="{package_name}">{package_name}</span>
     <span class="chart-bar-track">
-        {segments_html}
+        {_segments_html(_build_segments(timeline, start_time, end_time))}
     </span>
 </div>"""
+
+
+def mini_bar_html(
+    timeline: list[dict],
+    start_time: datetime,
+    end_time: datetime,
+) -> str:
+    """Render a compact, label-free timeline track for a tree node.
+
+    Args:
+        timeline: List of dicts with keys: timestamp, severity.
+        start_time: Chart start time (shared window for all nodes).
+        end_time: Chart end time.
+
+    Returns:
+        HTML string containing only the bar track.
+    """
+    if not timeline:
+        return (
+            '<span class="chart-bar-track">'
+            '<span class="chart-bar-segment" style="background:#30363d;flex:1;"></span>'
+            "</span>"
+        )
+
+    return f'<span class="chart-bar-track">{_segments_html(_build_segments(timeline, start_time, end_time))}</span>'
 
 
 def timeseries_chart_html(

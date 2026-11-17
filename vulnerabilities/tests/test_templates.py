@@ -164,14 +164,29 @@ class TestTreeHtml(unittest.TestCase):
 
     def test_returns_inner_html(self):
         """tree_html returns inner HTML (not full page)."""
-        html = tree_html(1, {})
+        html = tree_html(1)
         self.assertIn("Dependency Tree", html)
         self.assertIn("hx-get", html)
         self.assertNotIn("<!DOCTYPE html>", html)
 
+    def test_tree_container_loads_on_page_load(self):
+        """The tree itself is fetched when the page loads."""
+        html = tree_html(42)
+        self.assertIn('id="tree-root"', html)
+        self.assertIn('hx-get="/api/tree/42"', html)
+        self.assertIn('hx-trigger="load"', html)
+        # Bars are emitted by /api/tree, not here, so they arrive with the tree
+        self.assertNotIn('hx-get="/api/bars/42"', html)
+
+    def test_toggle_node_triggers_children(self):
+        """Expanding a node fires node-expanded on its children container."""
+        html = tree_html(42)
+        self.assertIn("toggleNode", html)
+        self.assertIn("node-expanded", html)
+
     def test_base_html_returns_full_page(self):
         """base_html returns a full HTML page."""
-        html = base_html("Title", tree_html(1, {}))
+        html = base_html("Title", tree_html(1))
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("<html", html)
         self.assertIn("</html>", html)

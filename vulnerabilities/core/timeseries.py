@@ -5,7 +5,16 @@ for chart rendering.
 """
 
 import sqlite3
+from datetime import datetime, timedelta
 from typing import Any
+
+
+def _parse_iso(ts: str) -> datetime:
+    """Parse an ISO timestamp, falling back to datetime.min."""
+    try:
+        return datetime.fromisoformat(ts)
+    except (ValueError, TypeError):
+        return datetime.min
 
 
 def get_timeseries_for_package(
@@ -144,6 +153,94 @@ def get_subtree_timeseries(
             entry["severity"] = severity
 
     return sorted(by_scan.values(), key=lambda e: e["timestamp"])
+
+
+SEVERITY_RANK: dict[str, int] = {
+    "NONE": 0,
+    "LOW": 1,
+    "MEDIUM": 2,
+    "HIGH": 3,
+    "CRITICAL": 4,
+}
+
+RANK_SEVERITY: dict[int, str] = {rank: name for name, rank in SEVERITY_RANK.items()}
+
+
+def get_tree_subtree_timelines(
+    conn: sqlite3.Connection,
+    scan_id: int,
+) -> dict[str, list[dict[str, Any]]]:
+    """Get subtree-aggregated timelines for every node of a scan's tree.
+
+    A single recursive pass builds the descendant closure of every node,
+    then joins vulnerability events from *all* scans, keeping the highest
+    severity per (node, scan): a node is red when any descendant is red.
+
+    Args:
+        conn: Database connection.
+        scan_id: Scan whose dependency tree defines the structure.
+
+    Returns:
+        Dict mapping drv_path -> list of dicts with keys:
+        scan_id, timestamp, severity.
+    """
+    cursor = conn.execute(
+        """
+        WITH RECURSIVE descendants(root_id, node_id) AS (
+            SELECT id, id
+            FROM dependency_tree
+            WHERE scan_id = ?
+            UNION ALL
+            SELECT d.root_id, dt.id
+            FROM descendants d
+            JOIN dependency_tree dt ON dt.parent_id = d.node_id
+        )
+        SELECT r.drv_path, v.scan_id, s.timestamp,
+               MAX(CASE v.severity
+                   WHEN 'CRITICAL' THEN 4
+                   WHEN 'HIGH' THEN 3
+                   WHEN 'MEDIUM' THEN 2
+                   WHEN 'LOW' THEN 1
+                   ELSE 0 END) AS severity_rank
+        FROM descendants d
+        JOIN dependency_tree r ON r.id = d.root_id
+        JOIN dependency_tree dt ON dt.id = d.node_id
+        JOIN vulnerability_events v ON v.drv_path = dt.drv_path
+        JOIN scans s ON s.id = v.scan_id
+        GROUP BY r.drv_path, v.scan_id
+        ORDER BY s.timestamp
+        """,
+        (scan_id,),
+    )
+
+    timelines: dict[str, list[dict[str, Any]]] = {}
+    for drv_path, event_scan_id, timestamp, rank in cursor.fetchall():
+        timelines.setdefault(drv_path, []).append({
+            "scan_id": event_scan_id,
+            "timestamp": timestamp,
+            "severity": RANK_SEVERITY.get(rank, "NONE"),
+        })
+    return timelines
+
+
+def get_scan_window(
+    conn: sqlite3.Connection,
+    pad_days: int = 1,
+) -> tuple[datetime, datetime]:
+    """Earliest and latest scan timestamps, padded for chart rendering.
+
+    Args:
+        conn: Database connection.
+        pad_days: Days to add on each side of the window.
+
+    Returns:
+        (start, end) datetime pair covering every scan.
+    """
+    cursor = conn.execute("SELECT MIN(timestamp), MAX(timestamp) FROM scans")
+    lowest, highest = cursor.fetchone()
+    if lowest is None or highest is None:
+        return datetime.min, datetime.max
+    return _parse_iso(lowest) - timedelta(days=pad_days), _parse_iso(highest) + timedelta(days=pad_days)
 
 
 def get_aggregated_severity(

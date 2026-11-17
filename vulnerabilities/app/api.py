@@ -3,16 +3,19 @@
 Provides HTMX-compatible endpoints for:
 - /api/scans: List of scans for sidebar
 - /api/tree/<scan_id>: HTML dependency tree
+- /api/bars/<scan_id>: timeline bars for the roots and their children
+- /api/bars/<scan_id>/<drv_path>: timeline bars for a node's children
+- /api/children/<scan_id>/<drv_path>: children beyond the visible limit
 - /api/vuln-map/<scan_id>: JSON vulnerability map
 """
 
 from contextlib import closing
-from datetime import timedelta
+from datetime import datetime
 
-from core import database, timeseries
-from app.chart import _parse_timestamp, timeseries_bar_html, timeseries_chart_html
+from app.chart import mini_bar_html
+from app.colors import SEVERITY_ORDER
 from app.templates import base_html, tree_html
-from core.normalizer import _cvss_from_severity
+from core import database, timeseries
 
 
 def _get_db():
@@ -49,80 +52,157 @@ def api_scans_endpoint():
     return html
 
 
+MAX_VISIBLE_CHILDREN = 50
+
+
+def _node_id(drv_path: str) -> str:
+    """DOM id for a tree node."""
+    return f"node-{drv_path.replace('/', '_').replace('.', '_')}"
+
+
+def _children_map(nodes: list[dict]) -> dict[str, list[dict]]:
+    """Map parent node id -> list of child nodes."""
+    children: dict[str, list[dict]] = {}
+    for node in nodes:
+        parent_id = node.get("parent_id")
+        if parent_id is not None:
+            children.setdefault(str(parent_id), []).append(node)
+    return children
+
+
+def _vuln_map(conn, scan_id: int) -> dict[str, dict]:
+    """drv_path -> {"severity": ...} for a scan's vulnerability events."""
+    cursor = conn.execute(
+        "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
+        (scan_id,),
+    )
+    return {row[0]: {"severity": row[1]} for row in cursor.fetchall()}
+
+
+def _subtree_severities(
+    nodes: list[dict],
+    children_map: dict[str, list[dict]],
+    vuln_map: dict[str, dict],
+) -> dict[str, str]:
+    """Aggregated severity per node: a node is as red as its worst descendant."""
+    severity: dict[str, str] = {}
+
+    def walk(node: dict) -> str:
+        worst = vuln_map.get(node.get("drv_path", ""), {}).get("severity", "NONE")
+        for child in children_map.get(str(node.get("id")), []):
+            child_severity = walk(child)
+            if SEVERITY_ORDER.get(child_severity, 0) > SEVERITY_ORDER.get(worst, 0):
+                worst = child_severity
+        severity[str(node["id"])] = worst
+        return worst
+
+    for node in nodes:
+        if str(node["id"]) not in severity:
+            walk(node)
+    return severity
+
+
+def _ordered_children(
+    node: dict,
+    children_map: dict[str, list[dict]],
+    severity: dict[str, str],
+) -> list[dict]:
+    """Children sorted by aggregated severity (worst first), then name."""
+    return sorted(
+        children_map.get(str(node["id"]), []),
+        key=lambda c: (
+            -SEVERITY_ORDER.get(severity.get(str(c["id"]), "NONE"), 0),
+            c.get("package_name", ""),
+        ),
+    )
+
+
+def _render_node(
+    node: dict,
+    children_map: dict[str, list[dict]],
+    severity: dict[str, str],
+    scan_id: int,
+    offset: int = 0,
+) -> str:
+    """Render one tree node, its empty timeline slot, and its children.
+
+    Nodes with more than MAX_VISIBLE_CHILDREN children are truncated and
+    get a "show more" button that loads the rest lazily.
+
+    Args:
+        node: Tree node dict.
+        children_map: Parent id -> child nodes.
+        severity: Aggregated severity per node id.
+        scan_id: Scan the tree belongs to.
+        offset: Number of children to skip (for the "show more" response).
+
+    Returns:
+        HTML string for the node.
+    """
+    node_id = _node_id(node["drv_path"])
+    drv_path = node["drv_path"]
+    sev = severity.get(str(node["id"]), "NONE")
+    children = _ordered_children(node, children_map, severity)
+    has_children = bool(children)
+
+    html = f'<div class="tree-node" id="{node_id}">\n'
+    if has_children:
+        html += f'  <div class="tree-node-header" onclick="toggleNode(\'{node_id}\')">\n'
+    else:
+        html += '  <div class="tree-node-header">\n'
+    html += f'    <span class="expand-icon {"leaf" if not has_children else ""}">&#9654;</span>\n'
+    html += f'    <span class="severity-dot sev-{sev}"></span>\n'
+    html += f'    <span class="pkg-name">{node.get("package_name", "unknown")}</span>\n'
+    html += f'    <span class="sev-label">{sev}</span>\n'
+    html += '  </div>\n'
+    html += f'  <div class="node-timeline" id="{node_id}-timeline"></div>\n'
+
+    if has_children:
+        html += f'  <div class="tree-children" id="{node_id}-children"\n'
+        html += f'    hx-get="/api/bars/{scan_id}/{drv_path}"\n'
+        html += f'    hx-trigger="node-expanded"\n'
+        html += f'    hx-swap="none">\n'
+        for child in children[offset:offset + MAX_VISIBLE_CHILDREN]:
+            html += _render_node(child, children_map, severity, scan_id)
+        remaining = len(children) - offset - MAX_VISIBLE_CHILDREN
+        if remaining > 0:
+            html += (
+                f'    <button class="show-more" '
+                f'hx-get="/api/children/{scan_id}/{drv_path}?offset={offset + MAX_VISIBLE_CHILDREN}" '
+                f'hx-target="#{node_id}-children" hx-swap="beforeend" '
+                f'hx-trigger="click">show {remaining} more children</button>\n'
+            )
+        html += "  </div>\n"
+
+    html += "</div>"
+    return html
+
+
 def api_tree_endpoint(scan_id: int):
     """Get dependency tree as HTML for a scan."""
     with closing(_get_db()) as conn:
         nodes = database.get_dependency_tree_for_scan(conn, scan_id)
+        vuln_map = _vuln_map(conn, scan_id)
 
     if not nodes:
         return "<p>No tree data available for this scan.</p>"
 
-    # Build parent->children mapping
-    children_map: dict[str, list[dict]] = {}
-    root_nodes: list[dict] = []
-    for node in nodes:
-        parent_id = node.get("parent_id")
-        if parent_id is None:
-            root_nodes.append(node)
-        else:
-            children_map.setdefault(str(parent_id), []).append(node)
+    children_map = _children_map(nodes)
+    severity = _subtree_severities(nodes, children_map, vuln_map)
 
-    # Get vuln map for severity coloring
-    vuln_map: dict[str, dict] = {}
-    with closing(_get_db()) as conn:
-        cursor = conn.execute(
-            "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
-            (scan_id,),
-        )
-        for row in cursor.fetchall():
-            vuln_map[row[0]] = {"severity": row[1]}
-
-    def _severity_class(drv_path: str) -> tuple[str, str]:
-        """Return (severity_class, severity_label) for a drv_path."""
-        info = vuln_map.get(drv_path, {})
-        sev = info.get("severity", "NONE")
-        return f"sev-{sev}", sev
-
-    def _render(node: dict) -> tuple[str, str]:
-        pname = node.get("package_name", "unknown")
-        drv_path = node.get("drv_path", "")
-        node_id = f"node-{drv_path.replace('/', '_').replace('.', '_')}"
-        sev_class, severity = _severity_class(drv_path)
-        children = children_map.get(str(node.get("id")), [])
-        children_html = ""
-        for child in children:
-            html, child_severity = _render(child)
-            children_html += html
-            if _cvss_from_severity(child_severity) > _cvss_from_severity(severity):
-                severity = child_severity
-                sev_class = f"sev-{severity}"
-        has_children = len(children_html) > 0
-
-        html = f'<div class="tree-node" id="{node_id}">\n'
-        html += f'  <div class="tree-node-header" onclick="toggleNode(\'{node_id}\')">\n'
-        expand_class = "" if has_children else "leaf"
-        html += f'    <span class="expand-icon {expand_class}">&#9654;</span>\n'
-        html += f'    <span class="severity-dot {sev_class}"></span>\n'
-        html += f'    <span class="pkg-name">{pname}</span>\n'
-        html += f'    <span class="sev-label">{severity}</span>\n'
-        html += f'  </div>\n'
-        html += (
-            f'  <div class="node-timeline" id="{node_id}-timeline"\n'
-            f'    hx-get="/api/node-chart/{scan_id}/{drv_path}"\n'
-            f'    hx-trigger="node-expanded"\n'
-            f'    hx-swap="innerHTML"></div>\n'
-        )
-        if has_children:
-            html += f'  <div class="tree-children" id="{node_id}-children">\n'
-            html += children_html
-            html += "  </div>\n"
-        html += "</div>"
-        return html, severity
-
+    root_nodes = [n for n in nodes if n.get("parent_id") is None]
     result = ""
-    for root in root_nodes:
-        html, _severity = _render(root)
-        result += html
+    for root in sorted(
+        root_nodes,
+        key=lambda n: (-SEVERITY_ORDER.get(severity.get(str(n["id"]), "NONE"), 0), n["drv_path"]),
+    ):
+        result += _render_node(root, children_map, severity, scan_id)
+
+    # Fill the roots' and their children's bars once the tree is in the DOM
+    result += (
+        f'<div id="bars-bootstrap" hx-get="/api/bars/{scan_id}" '
+        'hx-trigger="load" hx-swap="none"></div>'
+    )
     return result
 
 
@@ -146,66 +226,110 @@ def api_vuln_map_endpoint(scan_id: int):
     return vuln_map
 
 
-def api_node_chart_endpoint(scan_id: int, drv_path: str) -> str:
-    """Render the inline timeline mini-bar for a node's subtree (HTMX).
+def _bars_html(
+    nodes: list[dict],
+    timelines: dict[str, list[dict]],
+    start: datetime,
+    end: datetime,
+) -> str:
+    """Out-of-band HTML filling the timeline slot of each given node."""
+    html = ""
+    for node in nodes:
+        html += (
+            f'<div id="{_node_id(node["drv_path"])}-timeline" hx-swap-oob="true">'
+            f'{mini_bar_html(timelines.get(node["drv_path"], []), start, end)}'
+            f"</div>"
+        )
+    return html
+
+
+def api_bars_endpoint(scan_id: int, drv_path: str | None = None) -> str:
+    """HTMX out-of-band bars for a node's children (roots on tree load).
 
     Args:
-        scan_id: Scan whose dependency tree defines the subtree.
-        drv_path: Derivation path of the subtree root node. The HTMX URL
-            embeds it without its leading slash, since Bottle consumes the
-            slash between route segments.
+        scan_id: Scan whose dependency tree defines the structure.
+        drv_path: Derivation path of the expanded node. Omit for the
+            bootstrap request, which fills the roots and their children.
+            The HTMX URL embeds it without its leading slash, since
+            Bottle consumes the separator slash between route segments.
 
     Returns:
-        HTML string for a compact timeline bar.
+        HTML string of out-of-band timeline divs.
+    """
+    with closing(_get_db()) as conn:
+        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
+        if not nodes:
+            return ""
+        children_map = _children_map(nodes)
+        severity = _subtree_severities(nodes, children_map, _vuln_map(conn, scan_id))
+        start, end = timeseries.get_scan_window(conn)
+        timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
+
+    if drv_path is None:
+        roots = [n for n in nodes if n.get("parent_id") is None]
+        targets = list(roots)
+        for root in roots:
+            targets.extend(_ordered_children(root, children_map, severity)[:MAX_VISIBLE_CHILDREN])
+    else:
+        if not drv_path.startswith("/"):
+            drv_path = "/" + drv_path
+        parent = next((n for n in nodes if n["drv_path"] == drv_path), None)
+        if parent is None:
+            return ""
+        targets = _ordered_children(parent, children_map, severity)
+
+    return _bars_html(targets, timelines, start, end)
+
+
+def api_children_endpoint(
+    scan_id: int,
+    drv_path: str,
+    offset: int = MAX_VISIBLE_CHILDREN,
+) -> str:
+    """HTMX response: children of a node beyond the visible limit, with bars.
+
+    Args:
+        scan_id: Scan whose dependency tree defines the structure.
+        drv_path: Derivation path of the node whose children are requested.
+        offset: Number of already-rendered children to skip.
+
+    Returns:
+        HTML string: the remaining tree nodes plus their timeline bars.
     """
     if not drv_path.startswith("/"):
         drv_path = "/" + drv_path
 
     with closing(_get_db()) as conn:
-        timeline = timeseries.get_subtree_timeseries(conn, scan_id, drv_path)
+        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
+        if not nodes:
+            return ""
+        children_map = _children_map(nodes)
+        severity = _subtree_severities(nodes, children_map, _vuln_map(conn, scan_id))
+        start, end = timeseries.get_scan_window(conn)
+        timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
 
-    if not timeline:
-        return (
-            '<span class="chart-bar-track">'
-            '<span class="chart-bar-segment" style="background:#30363d;flex:1;"></span>'
-            "</span>"
-        )
+    parent = next((n for n in nodes if n["drv_path"] == drv_path), None)
+    if parent is None:
+        return ""
 
-    # Pad one day on each side so a single scan still produces a visible bar
-    start = _parse_timestamp(timeline[0]["timestamp"]) - timedelta(days=1)
-    end = _parse_timestamp(timeline[-1]["timestamp"]) + timedelta(days=1)
-    label = drv_path.rsplit("/", 1)[-1]
-    return timeseries_bar_html(label, timeline, start, end)
+    hidden = _ordered_children(parent, children_map, severity)[offset:]
+    html = "".join(
+        _render_node(child, children_map, severity, scan_id) for child in hidden
+    )
+    return html + _bars_html(hidden, timelines, start, end)
 
 
 def scan_detail_endpoint(scan_id: int):
-    """Render scan detail page with tree and timeseries."""
+    """Render scan detail page: dependency tree with inline timelines."""
     with closing(_get_db()) as conn:
         cursor = conn.execute(
             "SELECT id, timestamp, target FROM scans WHERE id = ?", (scan_id,)
         )
         row = cursor.fetchone()
-
-        if not row:
-            return "<h1>Scan not found</h1>"
         columns = [desc[0] for desc in cursor.description]
-        scan = dict(zip(columns, row))
 
-        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
-        roots = [n for n in nodes if n["parent_id"] is None]
-        entries: list[dict] = []
-        for root in roots:
-            for event in timeseries.get_subtree_timeseries(conn, scan_id, root["drv_path"]):
-                event["package_name"] = root["package_name"]
-                entries.append(event)
+    if not row:
+        return "<h1>Scan not found</h1>"
+    scan = dict(zip(columns, row))
 
-    if entries:
-        timestamps = [e["timestamp"] for e in entries]
-        start = (_parse_timestamp(min(timestamps)) - timedelta(days=1)).isoformat()
-        end = (_parse_timestamp(max(timestamps)) + timedelta(days=1)).isoformat()
-        chart = timeseries_chart_html(entries, start, end)
-    else:
-        chart = ""
-
-    body = tree_html(scan_id, {}) + chart
-    return base_html(f"Scan: {scan['target']}", body)
+    return base_html(f"Scan: {scan['target']}", tree_html(scan_id))

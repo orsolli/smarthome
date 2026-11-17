@@ -4,6 +4,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
+from datetime import timedelta
 
 from core import database
 from core import timeseries
@@ -199,6 +200,45 @@ class TestSubtreeTimeseries(unittest.TestCase):
             self.conn, self.scan1, "/nix/store/unknown.drv"
         )
         self.assertEqual(data, [])
+
+    def test_tree_timelines_cover_every_node(self):
+        """One pass returns the aggregated timeline for every node."""
+        timelines = timeseries.get_tree_subtree_timelines(self.conn, self.scan1)
+        self.assertIn("/nix/store/system.drv", timelines)
+        self.assertIn("/nix/store/sc.drv", timelines)
+        self.assertIn("/nix/store/diff.drv", timelines)
+        # gzip has no vulnerable descendants, so it is absent
+        self.assertNotIn("/nix/store/gzip.drv", timelines)
+
+    def test_tree_timelines_bubble_children_up(self):
+        """Ancestors inherit the worst severity of their subtree."""
+        timelines = timeseries.get_tree_subtree_timelines(self.conn, self.scan1)
+        root = timelines["/nix/store/system.drv"]
+        self.assertEqual(len(root), 2)
+        self.assertEqual(root[0]["severity"], "HIGH")  # self LOW, child HIGH
+        self.assertEqual(root[1]["severity"], "CRITICAL")  # Diff is a descendant
+
+    def test_scan_window_spans_all_scans(self):
+        """The chart window covers every scan, padded by a day."""
+        start, end = timeseries.get_scan_window(self.conn)
+        cursor = self.conn.execute(
+            "SELECT MIN(timestamp), MAX(timestamp) FROM scans"
+        )
+        lowest, highest = cursor.fetchone()
+        self.assertEqual(start, timeseries._parse_iso(lowest) - timedelta(days=1))
+        self.assertEqual(end, timeseries._parse_iso(highest) + timedelta(days=1))
+
+    def test_scan_window_with_no_scans(self):
+        """An empty database yields a degenerate window instead of crashing."""
+        empty_fd, empty_path = tempfile.mkstemp(suffix=".db")
+        os.close(empty_fd)
+        conn = database.init_db(empty_path)
+        try:
+            start, end = timeseries.get_scan_window(conn)
+            self.assertLess(start, end)
+        finally:
+            conn.close()
+            os.unlink(empty_path)
 
 
 if __name__ == "__main__":

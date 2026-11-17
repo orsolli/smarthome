@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from app.chart import (
     timeseries_bar_html,
     timeseries_chart_html,
+    mini_bar_html,
     _severity_to_color,
     _parse_timestamp,
 )
@@ -181,6 +182,37 @@ class TestTimeseriesChartHtml(unittest.TestCase):
         # NONE (Jan 1 -> Jan 15) then HIGH (Jan 15 -> Dec 31); LOW never persists
         self.assertEqual(html.count("chart-bar-segment"), 2)
         self.assertNotIn("width:0.00%", html)
+
+
+class TestMiniBarHtml(unittest.TestCase):
+    """Tests for the label-free tree bars."""
+
+    def test_empty_timeline_is_clean(self):
+        """A node with no events renders one gray track."""
+        html = mini_bar_html([], datetime(2024, 1, 1), datetime(2024, 12, 31))
+        self.assertIn("chart-bar-track", html)
+        self.assertIn("background:#30363d", html)
+        self.assertNotIn("chart-bar-label", html)
+
+    def test_segments_cover_the_shared_window(self):
+        """Bars use the global window so nodes are comparable."""
+        start = datetime(2024, 1, 1)
+        end = datetime(2024, 12, 31)
+        html = mini_bar_html(
+            [{"timestamp": "2024-06-15T10:00:00", "severity": "CRITICAL"}], start, end
+        )
+        widths = [float(w) for w in re.findall(r"width:([\d.]+)%", html)]
+        self.assertAlmostEqual(sum(widths), 100.0, places=1)
+        self.assertIn("rgba(218, 54, 51, 1.0)", html)
+
+    def test_no_label(self):
+        """Tree bars never render a package label."""
+        html = mini_bar_html(
+            [{"timestamp": "2024-06-15T10:00:00", "severity": "HIGH"}],
+            datetime(2024, 1, 1),
+            datetime(2024, 12, 31),
+        )
+        self.assertNotIn("chart-bar-label", html)
 
 
 if __name__ == "__main__":
