@@ -1,5 +1,16 @@
 """HTML templates for the vulnerability frontend."""
 
+from app.colors import SEVERITY_COLORS
+from core.severity import severity_from_cvss
+
+
+def _severity_css() -> str:
+    """CSS rules for the severity dots, derived from the color table."""
+    return "\n        ".join(
+        f".sev-{severity} {{ background: {color}; box-shadow: 0 0 6px {color}80; }}"
+        for severity, (color, _) in SEVERITY_COLORS.items()
+    )
+
 
 def base_html(title: str, body: str) -> str:
     """Render the base HTML page.
@@ -34,11 +45,7 @@ def base_html(title: str, body: str) -> str:
         .expand-icon.expanded {{ transform: rotate(90deg); }}
         .expand-icon.leaf {{ visibility: hidden; }}
         .severity-dot {{ width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }}
-        .sev-CRITICAL {{ background: #da3633; box-shadow: 0 0 6px #da363380; }}
-        .sev-HIGH {{ background: #f0883e; box-shadow: 0 0 6px #f0883e80; }}
-        .sev-MEDIUM {{ background: #d29922; box-shadow: 0 0 6px #d2992280; }}
-        .sev-LOW {{ background: #3fb950; }}
-        .sev-NONE {{ background: #30363d; }}
+        {_severity_css()}
         .pkg-name {{ font-size: 0.85rem; }}
         .sev-label {{ font-size: 0.7rem; color: #8b949e; margin-left: auto; }}
         #chart-container {{ margin-top: 20px; }}
@@ -128,14 +135,7 @@ def tree_node_html(
     if vuln_info:
         cvss_scores = vuln_info.get("cvssv3_basescore", {})
         max_score = max(cvss_scores.values()) if cvss_scores else 0.0
-        if max_score >= 9.0:
-            severity = "CRITICAL"
-        elif max_score >= 7.0:
-            severity = "HIGH"
-        elif max_score >= 4.0:
-            severity = "MEDIUM"
-        else:
-            severity = "LOW"
+        severity = severity_from_cvss(max_score)
 
     node_id = f"node-{drv_path.replace('/', '_').replace('.', '_')}"
     expand_class = "expanded" if expanded else ""

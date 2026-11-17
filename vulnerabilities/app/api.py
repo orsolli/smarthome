@@ -13,7 +13,7 @@ from contextlib import closing
 from datetime import datetime
 
 from app.chart import mini_bar_html
-from app.colors import SEVERITY_ORDER
+from app.colors import severity_rank
 from app.templates import base_html, tree_html
 from core import database, timeseries
 
@@ -81,25 +81,13 @@ def _vuln_map(conn, scan_id: int) -> dict[str, dict]:
 
 def _subtree_severities(
     nodes: list[dict],
-    children_map: dict[str, list[dict]],
     vuln_map: dict[str, dict],
 ) -> dict[str, str]:
     """Aggregated severity per node: a node is as red as its worst descendant."""
-    severity: dict[str, str] = {}
-
-    def walk(node: dict) -> str:
-        worst = vuln_map.get(node.get("drv_path", ""), {}).get("severity", "NONE")
-        for child in children_map.get(str(node.get("id")), []):
-            child_severity = walk(child)
-            if SEVERITY_ORDER.get(child_severity, 0) > SEVERITY_ORDER.get(worst, 0):
-                worst = child_severity
-        severity[str(node["id"])] = worst
-        return worst
-
-    for node in nodes:
-        if str(node["id"]) not in severity:
-            walk(node)
-    return severity
+    severities = timeseries.subtree_severities(
+        nodes, {drv_path: info["severity"] for drv_path, info in vuln_map.items()}
+    )
+    return {str(node_id): severity for node_id, severity in severities.items()}
 
 
 def _ordered_children(
@@ -111,7 +99,7 @@ def _ordered_children(
     return sorted(
         children_map.get(str(node["id"]), []),
         key=lambda c: (
-            -SEVERITY_ORDER.get(severity.get(str(c["id"]), "NONE"), 0),
+            -severity_rank(severity.get(str(c["id"]), "NONE")),
             c.get("package_name", ""),
         ),
     )
@@ -188,13 +176,13 @@ def api_tree_endpoint(scan_id: int):
         return "<p>No tree data available for this scan.</p>"
 
     children_map = _children_map(nodes)
-    severity = _subtree_severities(nodes, children_map, vuln_map)
+    severity = _subtree_severities(nodes, vuln_map)
 
     root_nodes = [n for n in nodes if n.get("parent_id") is None]
     result = ""
     for root in sorted(
         root_nodes,
-        key=lambda n: (-SEVERITY_ORDER.get(severity.get(str(n["id"]), "NONE"), 0), n["drv_path"]),
+        key=lambda n: (-severity_rank(severity.get(str(n["id"]), "NONE")), n["drv_path"]),
     ):
         result += _render_node(root, children_map, severity, scan_id)
 
@@ -261,7 +249,7 @@ def api_bars_endpoint(scan_id: int, drv_path: str | None = None) -> str:
         if not nodes:
             return ""
         children_map = _children_map(nodes)
-        severity = _subtree_severities(nodes, children_map, _vuln_map(conn, scan_id))
+        severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
         start, end = timeseries.get_scan_window(conn)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
 
@@ -304,7 +292,7 @@ def api_children_endpoint(
         if not nodes:
             return ""
         children_map = _children_map(nodes)
-        severity = _subtree_severities(nodes, children_map, _vuln_map(conn, scan_id))
+        severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
         start, end = timeseries.get_scan_window(conn)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
 

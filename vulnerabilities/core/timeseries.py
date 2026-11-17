@@ -13,6 +13,8 @@ import sqlite3
 from datetime import datetime, timedelta
 from typing import Any
 
+from core.severity import aggregate_severity, severity_rank
+
 
 def _parse_iso(ts: str) -> datetime:
     """Parse an ISO timestamp, falling back to datetime.min."""
@@ -103,17 +105,6 @@ def get_timeseries_for_all_packages(
     return [dict(zip(columns, row)) for row in rows]
 
 
-SEVERITY_RANK: dict[str, int] = {
-    "NONE": 0,
-    "LOW": 1,
-    "MEDIUM": 2,
-    "HIGH": 3,
-    "CRITICAL": 4,
-}
-
-RANK_SEVERITY: dict[int, str] = {rank: name for name, rank in SEVERITY_RANK.items()}
-
-
 def _nodes_of_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any]]:
     """Fetch one scan's dependency tree nodes."""
     cursor = conn.execute(
@@ -126,7 +117,7 @@ def _nodes_of_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any
     return [dict(zip(columns, row)) for row in rows]
 
 
-def _subtree_severities(
+def subtree_severities(
     nodes: list[dict[str, Any]],
     event_severity: dict[str, str],
 ) -> dict[int, str]:
@@ -156,7 +147,7 @@ def _subtree_severities(
             worst = event_severity.get(node.get("drv_path", ""), "NONE")
             for child in children.get(node["id"], []):
                 child_severity = severity.get(child["id"], "NONE")
-                if SEVERITY_RANK.get(child_severity, 0) > SEVERITY_RANK.get(worst, 0):
+                if severity_rank(child_severity) > severity_rank(worst):
                     worst = child_severity
             severity[node["id"]] = worst
     return severity
@@ -286,7 +277,7 @@ def get_tree_subtree_timelines(
         scan_data[other_id] = {
             "timestamp": timestamp,
             "index": _scan_index(other_nodes),
-            "severity": _subtree_severities(other_nodes, severities),
+            "severity": subtree_severities(other_nodes, severities),
         }
 
     own_name_counts: dict[str, int] = {}
@@ -359,9 +350,7 @@ def get_aggregated_severity(
     scan_id: int,
     package_name: str,
 ) -> dict[str, Any]:
-    """Get aggregated severity for a package across scans.
-
-    Returns max severity and count of scans where vulnerable.
+    """Get aggregated severity for a package within one scan.
 
     Args:
         conn: Database connection.
@@ -378,26 +367,22 @@ def get_aggregated_severity(
         JOIN scans s ON v.scan_id = s.id
         WHERE v.package_name = ? AND s.id = ?
         GROUP BY v.severity
-        ORDER BY cnt DESC
         """,
         (package_name, scan_id),
     )
     rows = cursor.fetchall()
-    severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1}
-    max_sev = "LOW"
-    max_score = 0
-    total = 0
-    latest_sev = "LOW"
-    for row in rows:
-        sev, cnt = row
-        total += cnt
-        score = severity_order.get(sev, 0)
-        if score > max_score:
-            max_score = score
-            max_sev = sev
-        latest_sev = sev  # last group wins (arbitrary, just pick one)
+    if not rows:
+        return {"max_severity": "NONE", "scan_count": 0, "latest_severity": "NONE"}
+
+    severities = [severity for severity, _ in rows]
+    latest = conn.execute(
+        """SELECT severity FROM vulnerability_events
+           WHERE package_name = ? AND scan_id = ?
+           ORDER BY timestamp DESC LIMIT 1""",
+        (package_name, scan_id),
+    ).fetchone()[0]
     return {
-        "max_severity": max_sev,
-        "scan_count": total,
-        "latest_severity": latest_sev,
+        "max_severity": aggregate_severity(severities),
+        "scan_count": sum(count for _, count in rows),
+        "latest_severity": latest,
     }

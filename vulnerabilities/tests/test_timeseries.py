@@ -114,8 +114,9 @@ class TestTimeseries(unittest.TestCase):
     def test_get_aggregated_severity_no_match(self):
         """Test aggregation for a package not in a scan."""
         agg = timeseries.get_aggregated_severity(self.conn, self.scan_id, "nonexistent")
-        self.assertEqual(agg["max_severity"], "LOW")
+        self.assertEqual(agg["max_severity"], "NONE")
         self.assertEqual(agg["scan_count"], 0)
+        self.assertEqual(agg["latest_severity"], "NONE")
 
 
 class TestSubtreeTimeseries(unittest.TestCase):

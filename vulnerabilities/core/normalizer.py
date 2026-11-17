@@ -11,6 +11,7 @@ This allows dependency injection for testing and production use.
 from typing import Any
 
 from interfaces import TreeNormalizerInterface
+from core.severity import severity_from_cvss
 
 
 def _severity_from_cvss(cvss_score: float) -> str:
@@ -22,13 +23,7 @@ def _severity_from_cvss(cvss_score: float) -> str:
     Returns:
         Severity label string.
     """
-    if cvss_score >= 9.0:
-        return "CRITICAL"
-    if cvss_score >= 7.0:
-        return "HIGH"
-    if cvss_score >= 4.0:
-        return "MEDIUM"
-    return "LOW"
+    return severity_from_cvss(cvss_score)
 
 def _cvss_from_severity(severity: str) -> float:
     """Convert a severity label back to a CVSS score for storage.
