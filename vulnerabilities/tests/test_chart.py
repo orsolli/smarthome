@@ -1,5 +1,6 @@
 """Tests for app/chart.py."""
 
+import re
 import unittest
 from datetime import datetime, timedelta
 
@@ -124,7 +125,7 @@ class TestTimeseriesChartHtml(unittest.TestCase):
         self.assertLess(bash_pos, vim_pos)
 
     def test_multiple_severities_for_same_package(self):
-        """Same package with multiple severities shows multiple segments."""
+        """Same package with multiple severities shows persisted-state segments."""
         data = [
             {"package_name": "vim", "timestamp": "2024-03-15T10:00:00", "severity": "LOW"},
             {"package_name": "vim", "timestamp": "2024-06-15T10:00:00", "severity": "HIGH"},
@@ -132,8 +133,54 @@ class TestTimeseriesChartHtml(unittest.TestCase):
         ]
         html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
         self.assertIn("vim", html)
-        # Should have 3 segments for 3 events
-        self.assertEqual(html.count("chart-bar-segment"), 3)
+        # 3 events produce 4 segments: NONE -> LOW -> HIGH -> CRITICAL
+        self.assertEqual(html.count("chart-bar-segment"), 4)
+
+    def test_leading_clean_segment(self):
+        """Before the first scan the package is shown as NONE (gray)."""
+        data = [
+            {"package_name": "vim", "timestamp": "2024-06-15T10:00:00", "severity": "HIGH"},
+        ]
+        html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
+        self.assertIn("rgba(48, 54, 61, 1.0)", html)
+        self.assertIn("NONE from 2024-01-01", html)
+
+    def test_segment_widths_sum_to_100(self):
+        """Persisted-state segments cover the whole window exactly."""
+        data = [
+            {"package_name": "vim", "timestamp": "2024-03-15T10:00:00", "severity": "LOW"},
+            {"package_name": "vim", "timestamp": "2024-09-15T10:00:00", "severity": "HIGH"},
+        ]
+        html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
+        widths = [float(w) for w in re.findall(r'width:([\d.]+)%', html)]
+        self.assertAlmostEqual(sum(widths), 100.0, places=1)
+
+    def test_last_state_persists_until_end(self):
+        """The last recorded severity extends to the end of the window."""
+        data = [
+            {"package_name": "vim", "timestamp": "2024-06-15T10:00:00", "severity": "CRITICAL"},
+        ]
+        html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
+        self.assertIn("CRITICAL from 2024-06-15T10:00:00 to 2024-12-31", html)
+
+    def test_intensity_by_severity(self):
+        """Segment opacity is fixed per severity level."""
+        data = [
+            {"package_name": "vim", "timestamp": "2024-06-15T10:00:00", "severity": "LOW"},
+        ]
+        html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
+        self.assertIn("rgba(63, 185, 80, 0.4)", html)  # LOW is a lighter green
+
+    def test_same_timestamp_scans_no_zero_width(self):
+        """Two scans at the same timestamp do not create zero-width segments."""
+        data = [
+            {"package_name": "vim", "timestamp": "2024-01-15T10:00:00", "severity": "LOW"},
+            {"package_name": "vim", "timestamp": "2024-01-15T10:00:00", "severity": "HIGH"},
+        ]
+        html = timeseries_chart_html(data, "2024-01-01", "2024-12-31")
+        # NONE (Jan 1 -> Jan 15) then HIGH (Jan 15 -> Dec 31); LOW never persists
+        self.assertEqual(html.count("chart-bar-segment"), 2)
+        self.assertNotIn("width:0.00%", html)
 
 
 if __name__ == "__main__":

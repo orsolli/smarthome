@@ -29,6 +29,15 @@ def _severity_to_color(severity: str, intensity: float = 1.0) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+SEVERITY_INTENSITY: dict[str, float] = {
+    "CRITICAL": 1.0,
+    "HIGH": 0.8,
+    "MEDIUM": 0.6,
+    "LOW": 0.4,
+    "NONE": 1.0,
+}
+
+
 def _parse_timestamp(ts: str) -> datetime:
     """Parse ISO timestamp string.
 
@@ -52,8 +61,10 @@ def timeseries_bar_html(
 ) -> str:
     """Render a single timeline bar for a package.
 
-    Each segment in the bar represents a time period where the
-    package had a particular severity level.
+    Each segment in the bar represents the time period where the
+    package had a particular severity level: the severity recorded at
+    a scan persists until the next scan changes it. The bar starts
+    clean (NONE) and ends with the last recorded state.
 
     Args:
         package_name: Package name.
@@ -76,24 +87,39 @@ def timeseries_bar_html(
     if total_seconds <= 0:
         total_seconds = 1
 
-    segments_html = ""
+    timeline = sorted(timeline, key=lambda x: _parse_timestamp(x.get("timestamp", "")))
+
+    # Build (severity, width_percent) segments: the state recorded at a
+    # scan persists until the next scan. Zero-width segments (two scans
+    # at the same timestamp) are skipped.
+    segments: list[tuple[str, float, datetime, datetime]] = []
+    prev_time = start_time
+    prev_sev = "NONE"
     for event in timeline:
         sev = event.get("severity", "NONE")
-        ts = event.get("timestamp", "")
-        event_time = _parse_timestamp(ts)
+        event_time = _parse_timestamp(event.get("timestamp", ""))
+        event_time = max(start_time, min(event_time, end_time))
 
-        # Calculate segment position and width
-        if event_time <= start_time:
-            seg_start = 0.0
-        else:
-            seg_start = (event_time - start_time).total_seconds() / total_seconds * 100
+        if event_time > prev_time:
+            width = (event_time - prev_time).total_seconds() / total_seconds * 100
+            segments.append((prev_sev, width, prev_time, event_time))
 
-        # Each event gets 100% width (it marks the state at that time)
-        # For a proper timeline, we'd calculate duration between events
-        width = 100.0 / max(1, len(timeline))
-        color = _severity_to_color(sev)
+        prev_time = event_time
+        prev_sev = sev
 
-        segments_html += f'<span class="chart-bar-segment" style="width:{width}%;background:{color};" title="{sev}: {ts}"></span>'
+    if prev_time < end_time:
+        width = (end_time - prev_time).total_seconds() / total_seconds * 100
+        segments.append((prev_sev, width, prev_time, end_time))
+
+    segments_html = ""
+    for sev, width, seg_start, seg_end in segments:
+        color = _severity_to_color(sev, SEVERITY_INTENSITY.get(sev, 1.0))
+        title = f"{sev} from {seg_start.isoformat()} to {seg_end.isoformat()}"
+        segments_html += (
+            f'<span class="chart-bar-segment" '
+            f'style="width:{width:.2f}%;background:{color};" '
+            f'title="{title}"></span>'
+        )
 
     return f"""<div class="chart-bar">
     <span class="chart-bar-label" title="{package_name}">{package_name}</span>
