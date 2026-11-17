@@ -224,10 +224,16 @@ def main():
     run(app, host=host, port=int(port), debug=True)
 
 
-def cli_main() -> None:
+def cli_main(argv: list[str] | None = None) -> int:
     """CLI entry point for vuln-scanner.
 
-    Parses --target argument and runs a scan.
+    Parses --target and runs a scan.
+
+    Args:
+        argv: Argument list, defaults to sys.argv[1:].
+
+    Returns:
+        Process exit code: 0 on success, 1 on failure.
     """
     parser = argparse.ArgumentParser(
         description="Run a vulnerability scan on a Nix derivation target."
@@ -237,19 +243,20 @@ def cli_main() -> None:
         default="/run/current-system",
         help="Target derivation path to scan (default: /run/current-system)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     result = run_scan(args.target)
 
     if "error" in result:
         print(f"Error: {result['error']}", file=sys.stderr)
-        sys.exit(1)
+        return 1
 
     print(f"Scan ID: {result['scan_id']}")
     print(f"Target: {result['target']}")
     print(f"Vulnerabilities found: {result['vulnerabilities_found']}")
     for vuln in result.get("vulnerabilities", []):
         print(f"  - {vuln['package_name']} ({vuln['severity']})")
+    return 0
 
 
 if __name__ == "__main__":

@@ -4,7 +4,8 @@ import json
 import os
 import tempfile
 import unittest
-from io import BytesIO
+from contextlib import redirect_stdout
+from io import BytesIO, StringIO
 from unittest.mock import patch
 
 
@@ -315,6 +316,70 @@ class TestChildrenLimit(unittest.TestCase):
         status, body = self._get(f"/api/bars/{self.scan_id}")
         self.assertEqual(status, "200 OK")
         self.assertEqual(body.count('hx-swap-oob="true"'), 51)
+
+
+class TestCliEntryPoint(unittest.TestCase):
+    """`python -m app` dispatches scan / serve / merge."""
+
+    def setUp(self):
+        self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
+        os.environ["DATABASE_PATH"] = self.db_path
+        from app import __main__ as cli_module
+        self.cli_module = cli_module
+
+    def tearDown(self):
+        os.unlink(self.db_path)
+
+    def test_scan_subcommand_forwards_the_target(self):
+        with patch.object(self.cli_module, "cli_main", return_value=0) as mock:
+            self.assertEqual(self.cli_module.cli(["scan", "--target", "./result"]), 0)
+            mock.assert_called_once_with(["--target", "./result"])
+
+    def test_serve_subcommand_sets_the_bind_address(self):
+        original = os.environ.get("BIND_ADDRESS")
+        with patch.object(self.cli_module, "main", return_value=None):
+            self.assertEqual(
+                self.cli_module.cli(["serve", "--bind", "127.0.0.1:8092"]), 0
+            )
+        self.assertEqual(os.environ["BIND_ADDRESS"], "127.0.0.1:8092")
+        if original is None:
+            del os.environ["BIND_ADDRESS"]
+        else:
+            os.environ["BIND_ADDRESS"] = original
+
+    def test_merge_subcommand_reads_trees_from_stdin(self):
+        text = (
+            "/nix/store/sysdrv000000000000000000000000000000-nixos-system.drv\n"
+            "└───/nix/store/pathdrv000000000000000000000000000000-system-path.drv\n"
+            "    └───/nix/store/xdgdrv000000000000000000000000000000-xdg-utils-9.99.0.drv\n"
+            "/nix/store/sysdrv000000000000000000000000000000-nixos-system.drv\n"
+            "└───/nix/store/etcdrv000000000000000000000000000000-etc.drv\n"
+        )
+        buffer = StringIO(text)
+        out = StringIO()
+        with patch("sys.stdin", buffer), redirect_stdout(out):
+            self.assertEqual(self.cli_module.cli(["merge", "--format", "ascii"]), 0)
+        self.assertIn("system-path", out.getvalue())
+        self.assertIn("etc", out.getvalue())
+
+    def test_no_subcommand_is_an_error(self):
+        with self.assertRaises(SystemExit) as raised:
+            self.cli_module.cli([])
+        self.assertEqual(raised.exception.code, 2)
+
+    def test_cli_main_returns_exit_codes(self):
+        import app.app as app_module
+        with patch.object(app_module, "run_scan", return_value={"error": "boom"}):
+            with redirect_stdout(StringIO()):
+                self.assertEqual(app_module.cli_main(["--target", "./result"]), 1)
+        with patch.object(
+            app_module,
+            "run_scan",
+            return_value={"scan_id": 1, "target": "./result", "vulnerabilities_found": 0},
+        ):
+            with redirect_stdout(StringIO()):
+                self.assertEqual(app_module.cli_main(["--target", "./result"]), 0)
 
 
 if __name__ == "__main__":
