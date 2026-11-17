@@ -59,7 +59,11 @@ pipeline = ScanPipeline.default()
 pipeline.storage = _storage  # Replace mock storage with real storage
 
 
-def run_scan(target: str) -> dict:
+def run_scan(
+    target: str,
+    label: str | None = None,
+    timestamp: str | None = None,
+) -> dict:
     """Run a full vulnerability scan on the given target.
 
     Delegates to ScanPipeline which orchestrates:
@@ -72,11 +76,13 @@ def run_scan(target: str) -> dict:
 
     Args:
         target: The derivation path to scan.
+        label: Identity the scan is recorded under (defaults to target).
+        timestamp: ISO timestamp to record, for backfilling old generations.
 
     Returns:
         Dict with scan results summary.
     """
-    return pipeline.run_scan(target)
+    return pipeline.run_scan(target, label=label, timestamp=timestamp)
 
 
 @app.get("/vulnerabilities")
@@ -243,9 +249,27 @@ def cli_main(argv: list[str] | None = None) -> int:
         default="/run/current-system",
         help="Target derivation path to scan (default: /run/current-system)",
     )
+    parser.add_argument(
+        "--as-target",
+        default=None,
+        help=(
+            "Identity to record the scan under. Lets an old Nix generation "
+            "(a different derivation of the same system) join the timeline of "
+            "another target, e.g. --target /nix/var/nix/profiles/system-2-link "
+            "--as-target /run/current-system"
+        ),
+    )
+    parser.add_argument(
+        "--at",
+        default=None,
+        help=(
+            "ISO timestamp to record instead of now, for backfilling a "
+            "generation with the date it was activated"
+        ),
+    )
     args = parser.parse_args(argv)
 
-    result = run_scan(args.target)
+    result = run_scan(args.target, label=args.as_target, timestamp=args.at)
 
     if "error" in result:
         print(f"Error: {result['error']}", file=sys.stderr)
@@ -253,6 +277,11 @@ def cli_main(argv: list[str] | None = None) -> int:
 
     print(f"Scan ID: {result['scan_id']}")
     print(f"Target: {result['target']}")
+    scanned = result.get("scanned_path", result["target"])
+    if scanned != result["target"]:
+        print(f"Scanned path: {scanned}")
+    if result.get("timestamp"):
+        print(f"Recorded at: {result['timestamp']}")
     print(f"Vulnerabilities found: {result['vulnerabilities_found']}")
     for vuln in result.get("vulnerabilities", []):
         print(f"  - {vuln['package_name']} ({vuln['severity']})")

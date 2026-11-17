@@ -41,6 +41,14 @@ class TestDatabase(unittest.TestCase):
         scan_id = insert_scan(self.conn, "/run/current-system")
         self.assertEqual(scan_id, 1)
 
+    def test_insert_scan_keeps_a_backfilled_timestamp(self):
+        """A generation scan is dated when it ran, not when it was replayed."""
+        scan_id = insert_scan(self.conn, "/run/current-system", "2025-10-14T08:21:00")
+        row = self.conn.execute(
+            "SELECT timestamp FROM scans WHERE id = ?", (scan_id,)
+        ).fetchone()
+        self.assertEqual(row[0], "2025-10-14T08:21:00")
+
     def test_insert_vulnerability_event_returns_id(self):
         """Inserting a vulnerability event returns a valid ID."""
         scan_id = insert_scan(self.conn, "/run/current-system")
@@ -48,6 +56,22 @@ class TestDatabase(unittest.TestCase):
             self.conn, scan_id, "Diff", "/nix/store/Diff.drv", "HIGH"
         )
         self.assertEqual(event_id, 1)
+
+    def test_insert_vulnerability_event_keeps_the_scan_timestamp(self):
+        """Events of a backfilled generation are not dated today."""
+        scan_id = insert_scan(self.conn, "/run/current-system", "2025-10-14T08:21:00")
+        insert_vulnerability_event(
+            self.conn,
+            scan_id,
+            "Diff",
+            "/nix/store/Diff.drv",
+            "HIGH",
+            timestamp="2025-10-14T08:21:00",
+        )
+        row = self.conn.execute(
+            "SELECT timestamp FROM vulnerability_events WHERE scan_id = ?", (scan_id,)
+        ).fetchone()
+        self.assertEqual(row[0], "2025-10-14T08:21:00")
 
     def test_insert_dependency_node_returns_id(self):
         """Inserting a dependency node returns a valid ID."""

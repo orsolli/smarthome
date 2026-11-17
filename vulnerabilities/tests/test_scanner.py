@@ -227,9 +227,9 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
                 current = self._next
                 self._next += 1
                 return current
-            def insert_scan(self, target):
+            def insert_scan(self, target, timestamp=None):
                 return self._next_id()
-            def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity, version=None):
+            def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity, version=None, timestamp=None):
                 return self._next_id()
             def insert_dependency_node(self, scan_id, package_name, drv_path, parent_id=None, child_id=None, vulnerability_event_id=None, version=None, lineage=None):
                 node_id = self._next_id()
@@ -258,6 +258,48 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
         result = pipeline.run_scan("/custom/target")
         self.assertEqual(result["vulnerabilities_found"], 1)
         self.assertEqual(result["vulnerabilities"][0]["package_name"], "merged")
+
+
+class TestScanIdentity(unittest.TestCase):
+    """A scan is recorded under a target and a timestamp, not the store path."""
+
+    def test_scan_recorded_under_target(self):
+        """Without a label the scan identity is the target itself."""
+        storage = MockStorage()
+        pipeline = ScanPipeline.default()
+        pipeline.storage = storage
+        pipeline.run_scan("/nix/var/nix/profiles/system-4-link")
+        self.assertEqual(storage._scans[0]["target"], "/nix/var/nix/profiles/system-4-link")
+
+    def test_label_groups_a_generation_with_the_system(self):
+        """--as-target makes an old generation join the current system."""
+        storage = MockStorage()
+        pipeline = ScanPipeline.default()
+        pipeline.storage = storage
+        result = pipeline.run_scan(
+            "/nix/var/nix/profiles/system-2-link",
+            label="/run/current-system",
+        )
+        self.assertEqual(result["target"], "/run/current-system")
+        self.assertEqual(result["scanned_path"], "/nix/var/nix/profiles/system-2-link")
+        self.assertEqual(storage._scans[0]["target"], "/run/current-system")
+
+    def test_backfill_keeps_the_activation_date(self):
+        """Events are dated when the scan ran, not when it was replayed."""
+        storage = MockStorage()
+        pipeline = ScanPipeline.default()
+        pipeline.storage = storage
+        when = "2025-10-14T08:21:00"
+        result = pipeline.run_scan(
+            "/nix/var/nix/profiles/system-2-link",
+            label="/run/current-system",
+            timestamp=when,
+        )
+        self.assertEqual(result["timestamp"], when)
+        self.assertEqual(storage._scans[0]["timestamp"], when)
+        self.assertTrue(storage._events, "the mock pipeline records events")
+        for event in storage._events:
+            self.assertEqual(event["timestamp"], when)
 
 
 if __name__ == "__main__":

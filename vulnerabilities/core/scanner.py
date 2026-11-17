@@ -10,6 +10,7 @@ Usage:
 
 from typing import Any
 import os
+from datetime import datetime
 
 from interfaces import (
     DependencyMapperInterface,
@@ -49,9 +50,9 @@ class MockStorage(StorageInterface):
         self._next_id_counter += 1
         return current
 
-    def insert_scan(self, target: str) -> int:
+    def insert_scan(self, target: str, timestamp: str | None = None) -> int:
         scan_id = self._next_id()
-        self._scans.append({"id": scan_id, "target": target})
+        self._scans.append({"id": scan_id, "target": target, "timestamp": timestamp})
         return scan_id
 
     def insert_vulnerability_event(
@@ -61,6 +62,7 @@ class MockStorage(StorageInterface):
         drv_path: str,
         severity: str,
         version: str | None = None,
+        timestamp: str | None = None,
     ) -> int:
         event_id = self._next_id()
         self._events.append({
@@ -70,6 +72,7 @@ class MockStorage(StorageInterface):
             "version": version if version is not None else version_from_drv(drv_path, package_name),
             "drv_path": drv_path,
             "severity": severity,
+            "timestamp": timestamp,
         })
         return event_id
 
@@ -211,7 +214,12 @@ class ScanPipeline:
             storage=MockStorage(),
         )
 
-    def run_scan(self, target: str) -> dict[str, Any]:
+    def run_scan(
+        self,
+        target: str,
+        label: str | None = None,
+        timestamp: str | None = None,
+    ) -> dict[str, Any]:
         """Run a full vulnerability scan on the given target.
 
         Steps:
@@ -224,10 +232,17 @@ class ScanPipeline:
 
         Args:
             target: The derivation path to scan.
+            label: Identity the scan is recorded under. Defaults to target.
+                Passing an alias lets an old Nix generation (a different
+                derivation of the same system) join the timeline of
+                /run/current-system.
+            timestamp: ISO timestamp to record, for backfills of
+                generations that were activated on an earlier date.
 
         Returns:
             Dict with scan results summary.
         """
+        identity = label or target
         # Step 1: Resolve derivation
         derivations = self.derivation_source.show_derivation(target)
         system_derivation = next(iter(derivations), None)
@@ -258,20 +273,27 @@ class ScanPipeline:
         # Step 5: Normalize to flat records using the vuln_map from step 2
         vulnerability_events = self.tree_normalizer.normalize(merged, vuln_map)
 
-        # Step 6: Persist to storage
-        scan_id = self.storage.insert_scan(target)
+        # Step 6: Persist to storage. Events inherit the scan timestamp so a
+        # backfilled generation is dated when it ran, not when it was scanned.
+        scan_time = timestamp or datetime.utcnow().isoformat()
+        scan_id = self.storage.insert_scan(identity, scan_time)
         for record in vulnerability_events:
             record['event_id'] = self.storage.insert_vulnerability_event(
                 scan_id,
                 record["package_name"],
                 record["drv_path"],
                 record["severity"],
+                timestamp=scan_time,
             )
-        self._store_tree_nodes(scan_id, merged, {v["drv_path"]: v for v in vulnerability_events}, target)
+        self._store_tree_nodes(
+            scan_id, merged, {v["drv_path"]: v for v in vulnerability_events}, identity
+        )
 
         return {
             "scan_id": scan_id,
-            "target": target,
+            "target": identity,
+            "scanned_path": target,
+            "timestamp": scan_time,
             "vulnerabilities_found": len(vulnerability_events),
             "vulnerabilities": vulnerability_events,
         }

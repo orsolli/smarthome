@@ -1,6 +1,6 @@
 """Command line entry point for the vulnerability scanner.
 
-    python -m app scan  [--target /run/current-system]
+    python -m app scan  [--target /run/current-system] [--as-target ID] [--at ISO-TS]
     python -m app serve [--bind 127.0.0.1:8080]
     python -m app merge [--format json|ascii] < trees.txt
 
@@ -33,6 +33,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--target",
         default="/run/current-system",
         help="derivation target to scan (default: /run/current-system)",
+    )
+    scan.add_argument(
+        "--as-target",
+        default=None,
+        help=(
+            "identity to record the scan under, so an old system generation "
+            "shares the timeline of the target it is an alias of"
+        ),
+    )
+    scan.add_argument(
+        "--at",
+        default=None,
+        help="ISO timestamp to record instead of now (for backfills)",
     )
 
     serve = subparsers.add_parser("serve", help="start the web server")
@@ -78,7 +91,12 @@ def cli(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     if args.command == "scan":
-        return cli_main(["--target", args.target])
+        argv = ["--target", args.target]
+        if args.as_target:
+            argv += ["--as-target", args.as_target]
+        if args.at:
+            argv += ["--at", args.at]
+        return cli_main(argv)
 
     if args.command == "serve":
         os.environ["BIND_ADDRESS"] = args.bind

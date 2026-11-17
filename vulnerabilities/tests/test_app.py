@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from io import BytesIO, StringIO
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 
 def _node_id_for(drv_path: str) -> str:
@@ -336,6 +336,28 @@ class TestCliEntryPoint(unittest.TestCase):
             self.assertEqual(self.cli_module.cli(["scan", "--target", "./result"]), 0)
             mock.assert_called_once_with(["--target", "./result"])
 
+    def test_scan_subcommand_forwards_the_alias_and_date(self):
+        """A generation scan is recorded under the system it belongs to."""
+        with patch.object(self.cli_module, "cli_main", return_value=0) as mock:
+            self.assertEqual(
+                self.cli_module.cli(
+                    [
+                        "scan",
+                        "--target", "/nix/var/nix/profiles/system-2-link",
+                        "--as-target", "/run/current-system",
+                        "--at", "2025-10-14T08:21:00",
+                    ]
+                ),
+                0,
+            )
+            mock.assert_called_once_with(
+                [
+                    "--target", "/nix/var/nix/profiles/system-2-link",
+                    "--as-target", "/run/current-system",
+                    "--at", "2025-10-14T08:21:00",
+                ]
+            )
+
     def test_serve_subcommand_sets_the_bind_address(self):
         original = os.environ.get("BIND_ADDRESS")
         with patch.object(self.cli_module, "main", return_value=None):
@@ -380,6 +402,42 @@ class TestCliEntryPoint(unittest.TestCase):
         ):
             with redirect_stdout(StringIO()):
                 self.assertEqual(app_module.cli_main(["--target", "./result"]), 0)
+
+    def test_cli_main_reports_the_generation_it_backfilled(self):
+        import app.app as app_module
+        out = StringIO()
+        with patch.object(
+            app_module,
+            "run_scan",
+            return_value={
+                "scan_id": 5,
+                "target": "/run/current-system",
+                "scanned_path": "/nix/var/nix/profiles/system-2-link",
+                "timestamp": "2025-10-14T08:21:00",
+                "vulnerabilities_found": 0,
+            },
+        ) as run_scan:
+            with redirect_stdout(out):
+                self.assertEqual(
+                    app_module.cli_main(
+                        [
+                            "--target", "/nix/var/nix/profiles/system-2-link",
+                            "--as-target", "/run/current-system",
+                            "--at", "2025-10-14T08:21:00",
+                        ]
+                    ),
+                    0,
+                )
+        self.assertEqual(
+            run_scan.call_args,
+            call(
+                "/nix/var/nix/profiles/system-2-link",
+                label="/run/current-system",
+                timestamp="2025-10-14T08:21:00",
+            ),
+        )
+        self.assertIn("Scanned path: /nix/var/nix/profiles/system-2-link", out.getvalue())
+        self.assertIn("Recorded at: 2025-10-14T08:21:00", out.getvalue())
 
 
 if __name__ == "__main__":

@@ -27,16 +27,17 @@ class DatabaseStorage(StorageInterface):
         self.db_path = db_path
         self.conn = database.init_db(db_path)
 
-    def insert_scan(self, target: str) -> int:
+    def insert_scan(self, target: str, timestamp: str | None = None) -> int:
         """Insert a scan record and return its ID.
 
         Args:
-            target: The derivation path scanned.
+            target: The identity of what was scanned.
+            timestamp: ISO timestamp, defaults to now.
 
         Returns:
             The ID of the inserted scan.
         """
-        return database.insert_scan(self.conn, target)
+        return database.insert_scan(self.conn, target, timestamp)
 
     def insert_vulnerability_event(
         self,
@@ -45,6 +46,7 @@ class DatabaseStorage(StorageInterface):
         drv_path: str,
         severity: str,
         version: str | None = None,
+        timestamp: str | None = None,
     ) -> int:
         """Insert a vulnerability event and return its ID.
 
@@ -54,12 +56,13 @@ class DatabaseStorage(StorageInterface):
             drv_path: The Nix derivation path.
             severity: The severity level (e.g. 'HIGH').
             version: Version of the vulnerable derivation.
+            timestamp: When the scan ran, defaults to now.
 
         Returns:
             The ID of the inserted event.
         """
         return database.insert_vulnerability_event(
-            self.conn, scan_id, package_name, drv_path, severity, version
+            self.conn, scan_id, package_name, drv_path, severity, version, timestamp
         )
 
     def insert_dependency_node(

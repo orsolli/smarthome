@@ -94,19 +94,29 @@ def init_db(db_path: str) -> sqlite3.Connection:
     return conn
 
 
-def insert_scan(conn: sqlite3.Connection, target: str) -> int:
+def insert_scan(
+    conn: sqlite3.Connection,
+    target: str,
+    timestamp: str | None = None,
+) -> int:
     """Insert a scan record and return its ID.
 
     Args:
         conn: Database connection.
-        target: The derivation path scanned.
+        target: The identity of what was scanned. Scans of the same target
+            share timeline history.
+        timestamp: ISO timestamp of the scan. Defaults to now, but a
+            backfill of an old Nix generation passes the date that
+            generation was activated.
 
     Returns:
         The ID of the inserted scan.
     """
+    if timestamp is None:
+        timestamp = datetime.utcnow().isoformat()
     cursor = conn.execute(
         "INSERT INTO scans (timestamp, target) VALUES (?, ?)",
-        (datetime.utcnow().isoformat(), target),
+        (timestamp, target),
     )
     conn.commit()
     return cursor.lastrowid or 0
@@ -119,6 +129,7 @@ def insert_vulnerability_event(
     drv_path: str,
     severity: str,
     version: str | None = None,
+    timestamp: str | None = None,
 ) -> int:
     """Insert a vulnerability event and return its ID.
 
@@ -130,17 +141,22 @@ def insert_vulnerability_event(
         severity: Severity level (e.g. 'CRITICAL').
         version: Version of the vulnerable derivation. Derived from drv_path
             when omitted.
+        timestamp: When the scan that found it ran. Defaults to now. Events
+            inherit the scan's timestamp so a backfilled generation does not
+            look like it was found today.
 
     Returns:
         The ID of the inserted event.
     """
     if version is None:
         version = version_from_drv(drv_path, package_name)
+    if timestamp is None:
+        timestamp = datetime.utcnow().isoformat()
     cursor = conn.execute(
         """INSERT INTO vulnerability_events
            (scan_id, package_name, version, drv_path, severity, timestamp)
            VALUES (?, ?, ?, ?, ?, ?)""",
-        (scan_id, package_name, version, drv_path, severity, datetime.utcnow().isoformat()),
+        (scan_id, package_name, version, drv_path, severity, timestamp),
     )
     conn.commit()
     return cursor.lastrowid or 0
