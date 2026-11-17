@@ -6,6 +6,8 @@ Provides HTMX-compatible endpoints for:
 - /api/vuln-map/<scan_id>: JSON vulnerability map
 """
 
+from contextlib import closing
+
 from core import database
 from app.templates import base_html, tree_html
 from core.normalizer import _cvss_from_severity
@@ -24,14 +26,13 @@ def _get_db():
 
 def api_scans_endpoint():
     """Get list of scans for sidebar (HTMX)."""
-    conn = _get_db()
-    cursor = conn.execute(
-        "SELECT id, timestamp, target FROM scans ORDER BY timestamp DESC"
-    )
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    scans = [dict(zip(columns, row)) for row in rows]
-    conn.close()
+    with closing(_get_db()) as conn:
+        cursor = conn.execute(
+            "SELECT id, timestamp, target FROM scans ORDER BY timestamp DESC"
+        )
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        scans = [dict(zip(columns, row)) for row in rows]
 
     html = ""
     for s in scans:
@@ -48,7 +49,7 @@ def api_scans_endpoint():
 
 def api_tree_endpoint(scan_id: int):
     """Get dependency tree as HTML for a scan."""
-    with _get_db() as conn:
+    with closing(_get_db()) as conn:
         nodes = database.get_dependency_tree_for_scan(conn, scan_id)
 
     if not nodes:
@@ -66,7 +67,7 @@ def api_tree_endpoint(scan_id: int):
 
     # Get vuln map for severity coloring
     vuln_map: dict[str, dict] = {}
-    with _get_db() as conn:
+    with closing(_get_db()) as conn:
         cursor = conn.execute(
             "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
             (scan_id,),
@@ -119,15 +120,14 @@ def api_tree_endpoint(scan_id: int):
 
 def api_vuln_map_endpoint(scan_id: int):
     """Get vulnerability map as JSON for a scan."""
-    conn = _get_db()
-    cursor = conn.execute(
-        "SELECT package_name, drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
-        (scan_id,),
-    )
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    events = [dict(zip(columns, row)) for row in rows]
-    conn.close()
+    with closing(_get_db()) as conn:
+        cursor = conn.execute(
+            "SELECT package_name, drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
+            (scan_id,),
+        )
+        rows = cursor.fetchall()
+        columns = [desc[0] for desc in cursor.description]
+        events = [dict(zip(columns, row)) for row in rows]
 
     vuln_map: dict[str, dict] = {}
     for event in events:
@@ -140,12 +140,11 @@ def api_vuln_map_endpoint(scan_id: int):
 
 def scan_detail_endpoint(scan_id: int):
     """Render scan detail page with tree and timeseries."""
-    conn = _get_db()
-    cursor = conn.execute(
-        "SELECT id, timestamp, target FROM scans WHERE id = ?", (scan_id,)
-    )
-    row = cursor.fetchone()
-    conn.close()
+    with closing(_get_db()) as conn:
+        cursor = conn.execute(
+            "SELECT id, timestamp, target FROM scans WHERE id = ?", (scan_id,)
+        )
+        row = cursor.fetchone()
 
     if not row:
         return "<h1>Scan not found</h1>"

@@ -2,4 +2,5 @@ venv/
 result
 __pycache__
 *.db
+*.sqlite
 *.egg-info

@@ -5,10 +5,11 @@ to run scans and serve results via a Bottle web server.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-from bottle import Bottle, request, run  # type: ignore
+from bottle import Bottle, request, response, run  # type: ignore
 
 from core import database
 from core import timeseries
@@ -22,6 +23,16 @@ from app.api import (
 )
 
 app = Bottle()
+
+
+def _json_response(data) -> str:
+    """Serialize a dict or list payload and mark it as JSON.
+
+    Bottle 0.13's JSON plugin only auto-serializes dict return values,
+    so list-returning endpoints must serialize explicitly.
+    """
+    response.content_type = "application/json"
+    return json.dumps(data)
 
 # Default database path (writable location)
 import os
@@ -88,7 +99,7 @@ def vulnerabilities_endpoint():
     if package:
         vulns = [v for v in vulns if v["package_name"] == package]
 
-    return vulns
+    return _json_response(vulns)
 
 
 @app.get("/timeseries")
@@ -113,7 +124,7 @@ def timeseries_endpoint():
     else:
         data = timeseries.get_timeseries_for_all_packages(conn, since, until)
     conn.close()
-    return data
+    return _json_response(data)
 
 
 @app.get("/tree/<scan_id:int>")
@@ -129,7 +140,7 @@ def tree_endpoint(scan_id: int):
     conn = database.init_db(DB_PATH)
     tree = database.get_dependency_tree_for_scan(conn, scan_id)
     conn.close()
-    return tree
+    return _json_response(tree)
 
 
 @app.get("/aggregation/<scan_id:int>/<package_name>")
