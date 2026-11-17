@@ -117,5 +117,89 @@ class TestTimeseries(unittest.TestCase):
         self.assertEqual(agg["scan_count"], 0)
 
 
+class TestSubtreeTimeseries(unittest.TestCase):
+    """Tests for get_subtree_timeseries (tree-aware aggregation)."""
+
+    def setUp(self):
+        """Create a temp DB with a root -> ShellCheck -> Diff dependency tree."""
+        self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
+        self.conn = database.init_db(self.db_path)
+
+        self.scan1 = database.insert_scan(self.conn, "./result")
+        self.scan2 = database.insert_scan(self.conn, "./result")
+
+        root = database.insert_dependency_node(
+            self.conn, self.scan1, "system", "/nix/store/system.drv"
+        )
+        sc = database.insert_dependency_node(
+            self.conn, self.scan1, "ShellCheck", "/nix/store/sc.drv", parent_id=root
+        )
+        database.insert_dependency_node(
+            self.conn, self.scan1, "Diff", "/nix/store/diff.drv", parent_id=sc
+        )
+        database.insert_dependency_node(
+            self.conn, self.scan1, "gzip", "/nix/store/gzip.drv", parent_id=root
+        )
+
+        database.insert_vulnerability_event(
+            self.conn, self.scan1, "system", "/nix/store/system.drv", "LOW"
+        )
+        database.insert_vulnerability_event(
+            self.conn, self.scan1, "ShellCheck", "/nix/store/sc.drv", "HIGH"
+        )
+        database.insert_vulnerability_event(
+            self.conn, self.scan2, "Diff", "/nix/store/diff.drv", "CRITICAL"
+        )
+        self.conn.commit()
+
+    def tearDown(self):
+        try:
+            self.conn.close()
+        except Exception:
+            pass
+        try:
+            os.close(self.db_fd)
+        except Exception:
+            pass
+        try:
+            os.unlink(self.db_path)
+        except Exception:
+            pass
+
+    def test_root_subtree_aggregates_children(self):
+        """Root subtree inherits the highest severity from any descendant."""
+        data = timeseries.get_subtree_timeseries(
+            self.conn, self.scan1, "/nix/store/system.drv"
+        )
+        self.assertEqual(len(data), 2)
+        severities = {row["scan_id"]: row["severity"] for row in data}
+        self.assertEqual(severities[self.scan1], "HIGH")  # LOW (self) vs HIGH (child)
+        self.assertEqual(severities[self.scan2], "CRITICAL")  # Diff is a descendant
+
+    def test_leaf_subtree_is_itself(self):
+        """A subtree with no vulnerable descendants yields nothing."""
+        data = timeseries.get_subtree_timeseries(
+            self.conn, self.scan1, "/nix/store/gzip.drv"
+        )
+        self.assertEqual(data, [])
+
+    def test_subtree_of_vulnerable_child(self):
+        """Diff alone is vulnerable only in scan 2."""
+        data = timeseries.get_subtree_timeseries(
+            self.conn, self.scan1, "/nix/store/diff.drv"
+        )
+        self.assertEqual(len(data), 1)
+        self.assertEqual(data[0]["severity"], "CRITICAL")
+        self.assertEqual(data[0]["scan_id"], self.scan2)
+
+    def test_unknown_drv_path(self):
+        """A drv path not in the tree yields an empty timeline."""
+        data = timeseries.get_subtree_timeseries(
+            self.conn, self.scan1, "/nix/store/unknown.drv"
+        )
+        self.assertEqual(data, [])
+
+
 if __name__ == "__main__":
     unittest.main()

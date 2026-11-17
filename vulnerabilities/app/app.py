@@ -16,6 +16,7 @@ from core import timeseries
 from core.database_storage import DatabaseStorage
 from core.scanner import ScanPipeline
 from app.api import (
+    api_node_chart_endpoint,
     api_scans_endpoint,
     api_tree_endpoint,
     api_vuln_map_endpoint,
@@ -186,6 +187,12 @@ def _api_tree(scan_id: int):
 def _api_vuln_map(scan_id: int):
     """HTMX endpoint: JSON vulnerability map."""
     return api_vuln_map_endpoint(scan_id)
+
+
+@app.get("/api/node-chart/<scan_id:int>/<drv_path:path>")
+def _api_node_chart(scan_id: int, drv_path: str):
+    """HTMX endpoint: inline timeline mini-bar for a tree node's subtree."""
+    return api_node_chart_endpoint(scan_id, drv_path)
 
 
 @app.get("/scan/<scan_id:int>")

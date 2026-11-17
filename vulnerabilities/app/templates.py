@@ -49,6 +49,9 @@ def base_html(title: str, body: str) -> str:
         .scan-list {{ margin: 8px 0; }}
         .scan-item {{ padding: 4px 8px; font-size: 0.8rem; color: #8b949e; cursor: pointer; border-radius: 4px; }}
         .scan-item:hover, .scan-item.active {{ background: #21262d; color: #58a6ff; }}
+        .node-timeline {{ margin: 2px 0 6px 26px; }}
+        .node-timeline .chart-bar-label {{ display: none; }}
+        .node-timeline .chart-bar-track {{ height: 10px; }}
     </style>
 </head>
 <body>
@@ -182,8 +185,13 @@ function toggleNode(id) {{
     const children = document.getElementById(id + '-children');
     const icon = document.querySelector('#' + id + ' .expand-icon');
     if (children) {{
+        const expanding = !children.classList.contains('expanded');
         children.classList.toggle('expanded');
         if (icon) icon.classList.toggle('expanded');
+        if (expanding) {{
+            const timeline = document.getElementById(id + '-timeline');
+            if (timeline && window.htmx) htmx.trigger(timeline, 'node-expanded');
+        }}
     }}
 }}
 </script>"""

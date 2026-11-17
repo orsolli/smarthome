@@ -140,6 +140,63 @@ class TestJsonListEndpoints(unittest.TestCase):
         self.assertGreater(len(data), 0)
 
 
+class TestTreeTimelineWiring(unittest.TestCase):
+    """Tests for Phase 3 wiring: timeline placeholders in the tree,
+    the node-chart endpoint, and the scan-detail timeline chart."""
+
+    def setUp(self):
+        self.db_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+        self.db_path = self.db_file.name
+        self.db_file.close()
+        os.environ["DATABASE_PATH"] = self.db_path
+        import app.app as app_module
+        self.app_module = app_module
+        app_module.DB_PATH = self.db_path
+        app_module.pipeline.storage = app_module.DatabaseStorage(self.db_path)
+        result = app_module.run_scan("/run/current-system")
+        self.scan_id = result["scan_id"]
+
+    def tearDown(self):
+        if os.path.exists(self.db_path):
+            os.unlink(self.db_path)
+
+    def _get(self, path):
+        environ = {
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": path,
+            "QUERY_STRING": "",
+            "wsgi.input": BytesIO(),
+            "wsgi.errors": None,
+        }
+        start_response = unittest.mock.Mock()
+        body = b"".join(self.app_module.app.wsgi(environ, start_response))
+        status = start_response.call_args[0][0]
+        return status, body.decode()
+
+    def test_tree_html_has_timeline_placeholders(self):
+        status, body = self._get(f"/api/tree/{self.scan_id}")
+        self.assertEqual(status, "200 OK")
+        self.assertIn('class="node-timeline"', body)
+        self.assertIn('hx-trigger="node-expanded"', body)
+
+    def test_node_chart_endpoint_returns_bar(self):
+        import core.database as database
+        conn = database.init_db(self.db_path)
+        nodes = database.get_dependency_tree_for_scan(conn, self.scan_id)
+        conn.close()
+        root = next(n for n in nodes if n["parent_id"] is None)
+        status, body = self._get(f"/api/node-chart/{self.scan_id}{root['drv_path']}")
+        self.assertEqual(status, "200 OK")
+        self.assertIn("chart-bar-segment", body)
+        # The mock scan contains CRITICAL vulns, which bubble up to the root
+        self.assertIn("rgba(218, 54, 51", body)
+
+    def test_scan_detail_page_has_timeline_chart(self):
+        status, body = self._get(f"/scan/{self.scan_id}")
+        self.assertEqual(status, "200 OK")
+        self.assertIn("Vulnerability Timeline", body)
+
+
 if __name__ == "__main__":
     import sys
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

@@ -7,8 +7,10 @@ Provides HTMX-compatible endpoints for:
 """
 
 from contextlib import closing
+from datetime import timedelta
 
-from core import database
+from core import database, timeseries
+from app.chart import _parse_timestamp, timeseries_bar_html, timeseries_chart_html
 from app.templates import base_html, tree_html
 from core.normalizer import _cvss_from_severity
 
@@ -104,6 +106,12 @@ def api_tree_endpoint(scan_id: int):
         html += f'    <span class="pkg-name">{pname}</span>\n'
         html += f'    <span class="sev-label">{severity}</span>\n'
         html += f'  </div>\n'
+        html += (
+            f'  <div class="node-timeline" id="{node_id}-timeline"\n'
+            f'    hx-get="/api/node-chart/{scan_id}/{drv_path}"\n'
+            f'    hx-trigger="node-expanded"\n'
+            f'    hx-swap="innerHTML"></div>\n'
+        )
         if has_children:
             html += f'  <div class="tree-children" id="{node_id}-children">\n'
             html += children_html
@@ -138,6 +146,38 @@ def api_vuln_map_endpoint(scan_id: int):
     return vuln_map
 
 
+def api_node_chart_endpoint(scan_id: int, drv_path: str) -> str:
+    """Render the inline timeline mini-bar for a node's subtree (HTMX).
+
+    Args:
+        scan_id: Scan whose dependency tree defines the subtree.
+        drv_path: Derivation path of the subtree root node. The HTMX URL
+            embeds it without its leading slash, since Bottle consumes the
+            slash between route segments.
+
+    Returns:
+        HTML string for a compact timeline bar.
+    """
+    if not drv_path.startswith("/"):
+        drv_path = "/" + drv_path
+
+    with closing(_get_db()) as conn:
+        timeline = timeseries.get_subtree_timeseries(conn, scan_id, drv_path)
+
+    if not timeline:
+        return (
+            '<span class="chart-bar-track">'
+            '<span class="chart-bar-segment" style="background:#30363d;flex:1;"></span>'
+            "</span>"
+        )
+
+    # Pad one day on each side so a single scan still produces a visible bar
+    start = _parse_timestamp(timeline[0]["timestamp"]) - timedelta(days=1)
+    end = _parse_timestamp(timeline[-1]["timestamp"]) + timedelta(days=1)
+    label = drv_path.rsplit("/", 1)[-1]
+    return timeseries_bar_html(label, timeline, start, end)
+
+
 def scan_detail_endpoint(scan_id: int):
     """Render scan detail page with tree and timeseries."""
     with closing(_get_db()) as conn:
@@ -146,10 +186,26 @@ def scan_detail_endpoint(scan_id: int):
         )
         row = cursor.fetchone()
 
-    if not row:
-        return "<h1>Scan not found</h1>"
-    columns = [desc[0] for desc in cursor.description]
-    scan = dict(zip(columns, row))
+        if not row:
+            return "<h1>Scan not found</h1>"
+        columns = [desc[0] for desc in cursor.description]
+        scan = dict(zip(columns, row))
 
-    body = tree_html(scan_id, {})
+        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
+        roots = [n for n in nodes if n["parent_id"] is None]
+        entries: list[dict] = []
+        for root in roots:
+            for event in timeseries.get_subtree_timeseries(conn, scan_id, root["drv_path"]):
+                event["package_name"] = root["package_name"]
+                entries.append(event)
+
+    if entries:
+        timestamps = [e["timestamp"] for e in entries]
+        start = (_parse_timestamp(min(timestamps)) - timedelta(days=1)).isoformat()
+        end = (_parse_timestamp(max(timestamps)) + timedelta(days=1)).isoformat()
+        chart = timeseries_chart_html(entries, start, end)
+    else:
+        chart = ""
+
+    body = tree_html(scan_id, {}) + chart
     return base_html(f"Scan: {scan['target']}", body)

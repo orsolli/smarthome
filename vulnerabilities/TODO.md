@@ -32,8 +32,8 @@ The system consists of three logical layers:
 * [x] **Timeseries aggregation**: If any child component is red, parent is red. Only green if all child components are green. Larger aggregation windows result in darker red (higher aggregate severity).
 
 **Data Presentation (Time-Series):** A Timeline Bar Chart is necessary to show the history. This chart must render segmented bars, where the color and start/end points of a segment visually indicate:
-* [ ] **Color**: Gradient from light green (low severity) to dark red (critical). Severity mapping: Low → Medium → High → Critical, with lighter greens for cleaner states and darker reds for unmitigated.
-* [ ] **Interaction**: The tree must be collapsible, allowing users to drill down from the system root to specific packages and view their dependency relationships and their timeline bar chart.
+* [x] **Color**: Gradient from light green (low severity) to dark red (critical). Severity mapping: Low → Medium → High → Critical, with lighter greens for cleaner states and darker reds for unmitigated.
+* [x] **Interaction**: The tree must be collapsible, allowing users to drill down from the system root to specific packages and view their dependency relationships and their timeline bar chart.
 
 ### Phase 4: Database Schema Design (Derived from Visualization Needs)
 **Goal:** The database schema must support the visualization requirements defined in Phase 3: historical status, structured dependency mapping, and granular vulnerability records.
