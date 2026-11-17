@@ -229,13 +229,13 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
                 return current
             def insert_scan(self, target):
                 return self._next_id()
-            def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity):
+            def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity, version=None):
                 return self._next_id()
-            def insert_dependency_node(self, scan_id, package_name, drv_path, parent_id=None, child_id=None, vulnerability_event_id=None):
+            def insert_dependency_node(self, scan_id, package_name, drv_path, parent_id=None, child_id=None, vulnerability_event_id=None, version=None, lineage=None):
                 node_id = self._next_id()
                 self._nodes.append({"id": node_id, "scan_id": scan_id, "package_name": package_name})
                 return node_id
-            def update_dependency_node(self, id, scan_id=None, package_name=None, drv_path=None, parent_id=None, child_id=None, vulnerability_event_id=None):
+            def update_dependency_node(self, id, scan_id=None, package_name=None, drv_path=None, parent_id=None, child_id=None, vulnerability_event_id=None, version=None, lineage=None):
                 for node in self._nodes:
                     if node["id"] == id:
                         if scan_id is not None:

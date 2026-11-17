@@ -27,6 +27,7 @@ from mock.mock_derivation import MockDerivationSource
 from mock.mock_vulnix import MockVulnerabilityScanner
 from mock.mock_why_depends import MockDependencyMapper
 from core.normalizer import TreeNormalizerImpl
+from core.identity import version_from_drv, compressed_lineages
 from core.real_scanner import (
     RealDerivationSource,
     RealVulnerabilityScanner,
@@ -54,13 +55,19 @@ class MockStorage(StorageInterface):
         return scan_id
 
     def insert_vulnerability_event(
-        self, scan_id: int, package_name: str, drv_path: str, severity: str
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        severity: str,
+        version: str | None = None,
     ) -> int:
         event_id = self._next_id()
         self._events.append({
             "id": event_id,
             "scan_id": scan_id,
             "package_name": package_name,
+            "version": version if version is not None else version_from_drv(drv_path, package_name),
             "drv_path": drv_path,
             "severity": severity,
         })
@@ -74,12 +81,16 @@ class MockStorage(StorageInterface):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         node_id = self._next_id()
         self._nodes.append({
             "id": node_id,
             "scan_id": scan_id,
             "package_name": package_name,
+            "version": version if version is not None else version_from_drv(drv_path, package_name),
+            "lineage": lineage,
             "drv_path": drv_path,
             "parent_id": parent_id,
             "child_id": child_id,
@@ -96,6 +107,8 @@ class MockStorage(StorageInterface):
         parent_id: int | None = None,
         child_id: int | None = None,
         vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
     ) -> int:
         existing = next((n for n in self._nodes if n["id"] == id), None)
         if not existing:
@@ -112,6 +125,10 @@ class MockStorage(StorageInterface):
             existing["child_id"] = child_id
         if vulnerability_event_id is not None:
             existing["vulnerability_event_id"] = vulnerability_event_id
+        if version is not None:
+            existing["version"] = version
+        if lineage is not None:
+            existing["lineage"] = lineage
         return id
 
 
@@ -250,7 +267,7 @@ class ScanPipeline:
                 record["drv_path"],
                 record["severity"],
             )
-        self._store_tree_nodes(scan_id, merged, {v["drv_path"]: v for v in vulnerability_events})
+        self._store_tree_nodes(scan_id, merged, {v["drv_path"]: v for v in vulnerability_events}, target)
 
         return {
             "scan_id": scan_id,
@@ -259,50 +276,96 @@ class ScanPipeline:
             "vulnerabilities": vulnerability_events,
         }
 
+    @staticmethod
+    def _flatten_tree(tree: dict) -> list[tuple[dict, int | None]]:
+        """Depth-first list of (node, index of its parent) for a merged tree.
+
+        Parents always appear before their children, so a node can be stored
+        with its lineage already computed and its database id known.
+        """
+        flat: list[tuple[dict, int | None]] = []
+        stack: list[tuple[dict, int | None]] = [(tree, None)]
+        while stack:
+            node, parent_index = stack.pop()
+            index = len(flat)
+            flat.append((node, parent_index))
+            for child in reversed(node.get("children", [])):
+                stack.append((child, index))
+        return flat
+
     def _store_tree_nodes(
         self,
         scan_id: int,
         tree: dict,
         vuln_events: dict[str, Any],
-        parent_id: int | None = None,
+        root_label: str,
     ) -> dict[str, Any]:
-        """Recursively store dependency tree nodes in storage.
+        """Store every node of a dependency tree, with its identity.
 
         Args:
             scan_id: The scan ID.
             tree: The dependency tree dict.
-            vuln_events: Vulnerability events.
+            vuln_events: Vulnerability events keyed by drv_path.
+            root_label: The scan target, used as the root of every lineage.
 
         Returns:
-            Dict with node id and severity_score.
+            Dict with node id and severity_score of the tree root.
         """
-        pname = tree.get("pname", tree.get("name", ""))
-        drv_path = tree.get("drv_path", "")
-        if not pname and not drv_path:
-            return {"id": 0, "severity_score": 0}
+        flat = self._flatten_tree(tree)
 
-        node_id = self.storage.insert_dependency_node(
-            scan_id,
-            pname or drv_path,
-            drv_path,
-            parent_id=parent_id,
-            vulnerability_event_id=vuln_events.get(drv_path, {}).get("event_id"),
-        )
+        def name_of(node: dict) -> str:
+            return node.get("pname", node.get("name", "")) or node.get("drv_path", "")
 
-        severity_score = vuln_events.get(drv_path, {}).get("severity_score", 0)
-        child_id = None
+        valid = [index for index, (node, _) in enumerate(flat) if name_of(node)]
+        provisional = [
+            {
+                "id": index,
+                "package_name": name_of(flat[index][0]),
+                "parent_id": flat[index][1] if flat[index][1] in valid else None,
+            }
+            for index in valid
+        ]
+        lineages = compressed_lineages(provisional, root_label)
 
-        for child in tree.get("children", []):
-            node = self._store_tree_nodes(scan_id, child, vuln_events, parent_id=node_id)
-            if node["severity_score"] > severity_score:
-                severity_score = node["severity_score"]
-                child_id = node["id"]
-        if child_id:
-            self.storage.update_dependency_node(
-                node_id, scan_id, pname or drv_path, drv_path, child_id=child_id
+        children_of: dict[int, list[int]] = {}
+        for index, (_, parent_index) in enumerate(flat):
+            if parent_index is not None:
+                children_of.setdefault(parent_index, []).append(index)
+
+        node_ids: dict[int, int] = {}
+        for index in valid:
+            node = flat[index][0]
+            name = name_of(node)
+            drv_path = node.get("drv_path", "")
+            parent_index = flat[index][1]
+            node_ids[index] = self.storage.insert_dependency_node(
+                scan_id,
+                name,
+                drv_path,
+                parent_id=node_ids.get(parent_index) if parent_index is not None else None,
+                vulnerability_event_id=vuln_events.get(drv_path, {}).get("event_id"),
+                version=version_from_drv(drv_path, name),
+                lineage=lineages[index],
             )
 
-        return {
-            "id": node_id,
-            "severity_score": severity_score,
-        }
+        # Bottom-up pass: a node's score is the worst score in its subtree, and
+        # child_id points at the child that caused it.
+        scores: dict[int, int] = {}
+        for index in reversed(valid):
+            drv_path = flat[index][0].get("drv_path", "")
+            score = vuln_events.get(drv_path, {}).get("severity_score", 0)
+            top_child = None
+            for child in children_of.get(index, []):
+                if scores.get(child, 0) > score:
+                    score = scores[child]
+                    top_child = child
+            scores[index] = score
+            if top_child is not None:
+                self.storage.update_dependency_node(
+                    node_ids[index], child_id=node_ids[top_child]
+                )
+
+        root = valid[0] if valid else None
+        if root is None:
+            return {"id": 0, "severity_score": 0}
+        return {"id": node_ids[root], "severity_score": scores[root]}
