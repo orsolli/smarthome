@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -10,8 +11,8 @@ from unittest.mock import call, patch
 
 
 def _node_id_for(drv_path: str) -> str:
-    """Mirror of app.api._node_id for asserting DOM ids."""
-    return f"node-{drv_path.replace('/', '_').replace('.', '_')}"
+    """Mirror of app.templates.node_dom_id for asserting DOM ids."""
+    return "node-" + re.sub(r"[^A-Za-z0-9_-]", "_", drv_path)
 
 
 class TestRunScan(unittest.TestCase):
@@ -438,6 +439,213 @@ class TestCliEntryPoint(unittest.TestCase):
         )
         self.assertIn("Scanned path: /nix/var/nix/profiles/system-2-link", out.getvalue())
         self.assertIn("Recorded at: 2025-10-14T08:21:00", out.getvalue())
+
+
+class TestTargetListAndZoom(unittest.TestCase):
+    """The home page lists targets; ?days= zooms a scan's timeline window."""
+
+    HASH = "abcdefghijklmnopqrstuvwxyz01234567"
+
+    def setUp(self):
+        import core.database as database
+        from core.scanner import ScanPipeline
+
+        self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
+        os.environ["DATABASE_PATH"] = self.db_path
+        self.conn = database.init_db(self.db_path)
+
+        self.system = [
+            database.insert_scan(
+                self.conn, "/run/current-system",
+                timestamp="2024-10-01T00:00:00",
+                scanned_path="/nix/var/nix/profiles/system-2-link",
+            ),
+            database.insert_scan(
+                self.conn, "/run/current-system",
+                timestamp="2024-11-01T00:00:00",
+                scanned_path="/nix/var/nix/profiles/system-3-link",
+            ),
+            database.insert_scan(
+                self.conn, "/run/current-system",
+                timestamp="2024-11-15T00:00:00",
+                scanned_path="/nix/var/nix/profiles/system-5-link",
+            ),
+        ]
+        self.other = database.insert_scan(
+            self.conn, "./result", timestamp="2024-11-20T00:00:00"
+        )
+
+        for scan_id in self.system + [self.other]:
+            root = database.insert_dependency_node(
+                self.conn, scan_id, "system", f"/nix/store/{self.HASH}-system.drv"
+            )
+            database.insert_dependency_node(
+                self.conn, scan_id, "perl", f"/nix/store/{self.HASH}-perl-5.34.drv",
+                parent_id=root,
+            )
+            database.insert_vulnerability_event(
+                self.conn, scan_id, "perl", f"/nix/store/{self.HASH}-perl-5.34.drv",
+                "CRITICAL",
+            )
+        self.conn.commit()
+
+        import app.app as app_module
+        app_module.DB_PATH = self.db_path
+        app_module.pipeline = ScanPipeline.default()
+        app_module.pipeline.storage = app_module.DatabaseStorage(self.db_path)
+        self.app_module = app_module
+
+    def tearDown(self):
+        try:
+            self.conn.close()
+        except Exception:
+            pass
+        try:
+            os.close(self.db_fd)
+        except Exception:
+            pass
+        try:
+            os.unlink(self.db_path)
+        except Exception:
+            pass
+
+    def _get(self, path, query=""):
+        from unittest.mock import Mock
+        environ = {
+            "REQUEST_METHOD": "GET",
+            "PATH_INFO": path,
+            "QUERY_STRING": query,
+            "wsgi.input": BytesIO(),
+            "wsgi.errors": None,
+        }
+        start_response = Mock()
+        body = b"".join(self.app_module.app.wsgi(environ, start_response))
+        return start_response.call_args[0][0], body.decode()
+
+    def test_home_page_lists_each_target_once(self):
+        status, body = self._get("/")
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(body.count('class="target-item"'), 2)
+        self.assertIn("/run/current-system", body)
+        self.assertIn("./result", body)
+
+    def test_target_row_shows_scan_count_and_latest_date(self):
+        status, body = self._get("/")
+        self.assertIn("3 scans", body)
+        self.assertIn("1 scan · 2024-11-20", body)
+
+    def test_home_page_links_to_the_latest_scan_of_a_target(self):
+        status, body = self._get("/")
+        self.assertIn(f'href="/scan/{self.system[-1]}"', body)
+        self.assertIn(f'href="/scan/{self.other}"', body)
+
+    def test_scan_page_names_the_generation_it_scanned(self):
+        status, body = self._get(f"/scan/{self.system[0]}")
+        self.assertEqual(status, "200 OK")
+        self.assertIn("/nix/var/nix/profiles/system-2-link", body)
+        self.assertIn("2024-10-01 00:00", body)
+
+    def test_scan_page_offers_window_chips(self):
+        status, body = self._get(f"/scan/{self.system[-1]}")
+        self.assertEqual(body.count('class="chip'), 4)
+        self.assertIn('class="chip active" href="/scan/', body)  # "all" is active
+
+    def test_the_active_chip_matches_the_current_window(self):
+        status, body = self._get(f"/scan/{self.system[-1]}", query="days=7")
+        self.assertIn(f'class="chip active" href="/scan/{self.system[-1]}?days=7"', body)
+        self.assertIn(f'class="chip" href="/scan/{self.system[-1]}?days=30"', body)
+
+    def test_lazy_bar_urls_keep_the_window(self):
+        status, body = self._get(f"/api/tree/{self.system[-1]}", query="days=7")
+        self.assertEqual(status, "200 OK")
+        self.assertIn(f'hx-get="/api/bars/{self.system[-1]}?days=7"', body)
+
+    def test_zooming_drops_the_older_bar_boundaries(self):
+        _, full = self._get(f"/api/bars/{self.system[-1]}")
+        _, zoomed = self._get(f"/api/bars/{self.system[-1]}", query="days=7")
+        # Two bars, each split by the three scans: 4 segments over the full
+        # history, 2 in a window that only contains the last scan.
+        self.assertEqual(full.count("chart-bar-segment"), 8)
+        self.assertEqual(zoomed.count("chart-bar-segment"), 4)
+        self.assertIn("2024-10-01T00:00:00", full)
+        self.assertNotIn("2024-10-01T00:00:00", zoomed)
+
+
+class TestNodeIdsAreCssSafe(unittest.TestCase):
+    """HTMX finds an out-of-band bar swap with `#<id>`, so a node id that
+    carries `+` or `=` never matches and the node keeps an empty timeline."""
+
+    def test_characters_outside_a_css_identifier_are_flattened(self):
+        from app.templates import node_dom_id
+
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-webkitgtk-9.99.0+abi=1.0.drv"),
+            "node-_nix_store_abc-webkitgtk-9_99_0_abi_1_0_drv",
+        )
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-xvfb-run-1+g87f6705.drv"),
+            "node-_nix_store_abc-xvfb-run-1_g87f6705_drv",
+        )
+
+    def test_the_tree_slot_and_the_bar_share_one_css_safe_id(self):
+        import core.database as database
+        from core.scanner import ScanPipeline
+
+        db_fd, db_path = tempfile.mkstemp(suffix=".db")
+        os.close(db_fd)
+        try:
+            conn = database.init_db(db_path)
+            scan_id = database.insert_scan(conn, "/run/current-system")
+            root = database.insert_dependency_node(
+                conn, scan_id, "system", "/nix/store/abc-system.drv"
+            )
+            drv = "/nix/store/abc-webkitgtk-9.99.0+abi=1.0.drv"
+            database.insert_dependency_node(
+                conn, scan_id, "webkitgtk", drv, parent_id=root
+            )
+            database.insert_vulnerability_event(conn, scan_id, "webkitgtk", drv, "HIGH")
+            conn.commit()
+            conn.close()
+
+            os.environ["DATABASE_PATH"] = db_path
+            import app.app as app_module
+            app_module.DB_PATH = db_path
+            app_module.pipeline = ScanPipeline.default()
+            app_module.pipeline.storage = app_module.DatabaseStorage(db_path)
+
+            from unittest.mock import Mock
+            environ = {
+                "REQUEST_METHOD": "GET",
+                "PATH_INFO": f"/api/tree/{scan_id}",
+                "QUERY_STRING": "",
+                "wsgi.input": BytesIO(),
+                "wsgi.errors": None,
+            }
+            start_response = Mock()
+            tree = b"".join(app_module.app.wsgi(environ, start_response)).decode()
+
+            environ["PATH_INFO"] = f"/api/bars/{scan_id}/nix/store/abc-system.drv"
+            start_response = Mock()
+            bars = b"".join(app_module.app.wsgi(environ, start_response)).decode()
+
+            slot = 'id="node-_nix_store_abc-webkitgtk-9_99_0_abi_1_0_drv-timeline"'
+            self.assertIn(slot, tree)
+            self.assertIn(slot, bars)
+            self.assertIn("chart-bar-segment", bars)
+            ids = re.findall(r'id="(node-[^"]*)"', tree)
+            self.assertTrue(ids, "no node ids in the tree")
+            for node_id in ids:
+                self.assertIsNotNone(
+                    re.fullmatch(r"[A-Za-z0-9_-]+", node_id),
+                    f"id {node_id!r} is not a bare CSS identifier",
+                )
+        finally:
+            try:
+                os.close(db_fd)
+            except Exception:
+                pass
+            os.unlink(db_path)
 
 
 if __name__ == "__main__":

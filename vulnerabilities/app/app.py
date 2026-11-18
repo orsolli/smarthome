@@ -19,9 +19,9 @@ from app.api import (
     MAX_VISIBLE_CHILDREN,
     api_bars_endpoint,
     api_children_endpoint,
-    api_scans_endpoint,
     api_tree_endpoint,
     api_vuln_map_endpoint,
+    index_endpoint,
     scan_detail_endpoint,
 )
 
@@ -179,16 +179,22 @@ def health_endpoint():
     return {"status": "ok"}
 
 
-@app.get("/api/scans")
-def _api_scans():
-    """HTMX endpoint: list of scans for sidebar."""
-    return api_scans_endpoint()
+def _days_param() -> int | None:
+    """Window length in days from the query string, None for the whole history."""
+    raw = request.query.get("days")
+    return int(raw) if raw and raw.isdigit() else None
+
+
+@app.get("/")
+def _index():
+    """Landing page: one row per scanned target."""
+    return index_endpoint()
 
 
 @app.get("/api/tree/<scan_id:int>")
 def _api_tree(scan_id: int):
     """HTMX endpoint: HTML dependency tree."""
-    return api_tree_endpoint(scan_id)
+    return api_tree_endpoint(scan_id, _days_param())
 
 
 @app.get("/api/vuln-map/<scan_id:int>")
@@ -200,26 +206,26 @@ def _api_vuln_map(scan_id: int):
 @app.get("/api/bars/<scan_id:int>")
 def _api_bars(scan_id: int):
     """HTMX endpoint: timeline bars for the roots and their children."""
-    return api_bars_endpoint(scan_id)
+    return api_bars_endpoint(scan_id, days=_days_param())
 
 
 @app.get("/api/bars/<scan_id:int>/<drv_path:path>")
 def _api_bars_node(scan_id: int, drv_path: str):
     """HTMX endpoint: timeline bars for a node's children."""
-    return api_bars_endpoint(scan_id, drv_path)
+    return api_bars_endpoint(scan_id, drv_path, _days_param())
 
 
 @app.get("/api/children/<scan_id:int>/<drv_path:path>")
 def _api_children(scan_id: int, drv_path: str):
     """HTMX endpoint: children of a node beyond the visible limit."""
     offset = int(request.query.get("offset", MAX_VISIBLE_CHILDREN))
-    return api_children_endpoint(scan_id, drv_path, offset)
+    return api_children_endpoint(scan_id, drv_path, offset, _days_param())
 
 
 @app.get("/scan/<scan_id:int>")
 def _scan_detail(scan_id: int):
-    """HTMX endpoint: scan detail page."""
-    return scan_detail_endpoint(scan_id)
+    """One generation of a target, with the timeline window from ?days=."""
+    return scan_detail_endpoint(scan_id, _days_param())
 
 
 def main():

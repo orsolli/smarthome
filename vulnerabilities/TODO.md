@@ -249,3 +249,56 @@ pkgs.python3Packages.buildPythonApplication {
   propagatedBuildInputs = with pkgs.python3Packages; [ bottle setuptools ];
 }
 ```
+
+### Phase 7: Target-Scoped Timelines and Time Windows
+**Goal:** a bar should describe *one machine* across the generations of that machine, and be zoomable to the window the user cares about.
+
+**Already done in Phase 3 (identity work)**
+- [x] Store hash in `drv_path` changes every rebuild, so nodes are matched by name + version + compressed lineage (`core/identity.py`).
+- [x] A generation link is a different derivation of the same machine: scan it with `--as-target` (the identity recorded in `scans.target`) and `--at` (its activation date). Vulnerability events inherit the scan timestamp.
+- [x] Nodes that are clean in a scan emit an explicit `NONE` event, so a fixed vulnerability ends the bar.
+- [x] `package_name` is the base pname and everything after the first dash followed by a digit is the version (`...-webkitgtk-9.99.0+abi=1.0.drv` → `webkitgtk` / `9.99.0+abi=1.0`). The old greedy split left the version inside the name whenever it contained a character outside `[0-9a-z]`, so every ABI or revision rebuild of `webkitgtk`, `glibc`, `go` or `texlive.infra` looked like a new package and its bar restarted.
+
+**Open gaps**
+
+1. [ ] **The generation actually scanned is not recorded.** `scans.target` is `/run/current-system` while `scans.scanned_path` would be `/nix/var/nix/profiles/system-3-link`. Without it, "which scan is which generation" is only guessable from the timestamp.
+2. [ ] **The window is global.** `get_scan_window()` takes MIN/MAX over *all* scans, so a `/run/current-system` bar stretches across the unrelated `~/.dotfiles/result-example` scan.
+3. [ ] **`/` lists scans, not identities.** Eighteen generations of one laptop is 18 near-identical rows; the unit of interest is the target.
+4. [ ] **No zoom.** The oldest scan is six months back, and the interesting signal is the last few weeks.
+5. [ ] **Tooltip semantics are mixed.** The bar colour is the *subtree* maximum (`subtree_severities`), but the version in the tooltip is the node's own version — `pipewire` was HIGH on 2024-11-16 yet its bar stays CRITICAL because `libcanberra` under it is critical. Either label the bar as an aggregate or put the driving child's name in the tooltip.
+
+**Schema (`core/database.py`)**
+- `scans.scanned_path` (TEXT, nullable): the path handed to `vulnix`. Add with a guarded `ALTER TABLE` so existing databases upgrade in place.
+
+**Queries (`core/timeseries.py`)**
+- `get_scan_window(conn, target, since=None)` → `(start, end)` over the target's scans only, optionally cut at `since`.
+- `get_tree_subtree_timelines(conn, scan_id, since=None)` and `subtree_severities` take the same window.
+- `list_targets(conn)` → `target, scan_count, first_scan, last_scan, latest_scan_id, worst_severity`.
+
+**Frontend (`app/api.py`, `app/chart.py`)**
+- [ ] `/` renders the target list; `/scan/<id>` stays the generation view, reached from it, with a header naming the target, the generation link and the date.
+- [ ] `?days=30` (or `?since=`) on the tree page; chips `all / 90 / 30 / 7` that re-request the bars with the narrower window.
+- [ ] A node first seen inside the window keeps its leading `NONE` segment; scans outside the window are not bar boundaries.
+
+**Tests (TDD order)**
+1. Fixture DB with two targets and a scan outside the window; assert the window excludes the other target's scan.
+2. Assert a bar for a target never spans another target's timestamp.
+3. Assert `scanned_path` survives insert and is shown on the scan page.
+4. Assert `?days=7` on a backfilled DB drops the segments before the cutoff but keeps the count of segments equal to the in-window scans.
+
+**Backfill recipe** (one generation per row, quoted — `${pair##*:}` on `3:2024-11-01T15:48:40` yields `40`, which is how five scans ended up dated 1970)
+
+```bash
+for g in 1 2 3 4 5; do
+  link=/nix/var/nix/profiles/system-$g-link
+  ts=$(date -d "@$(stat -c %Y "$link")" +%Y-%m-%dT%H:%M:%S)   # stat on a symlink does not follow it
+  DATABASE_PATH=$DB VULNIX_PATH=/run/current-system/sw/bin/vulnix \
+    nix-shell -p python3 python3Packages.bottle \
+    --command "python -m app scan --target '$link' --as-target /run/current-system --at '$ts'"
+done
+```
+
+**Verification checklist**
+- Coverage query: `len(t) > 1` for most nodes in `get_tree_subtree_timelines(conn, scan_id)`.
+- Known movers to eyeball: `ruby` (HIGH → CRITICAL → HIGH), `pipewire` (1.6.3 → 1.6.9 → 9.99.0), `cups` (HIGH 2.4.16 → MEDIUM 2.4.19), `wai-extra` (oscillating CRITICAL/LOW), `webkitgtk` (one bar across the 2.54.1/2.54.2 abi=4.1/abi=6.0 rebuilds).
+- Bars only fill after a *real* click on a node header: HTMX `node-expanded` is fired by `toggleNode`, and an `eval`-based fake expansion or a class toggle never triggers the `/api/bars/...` fetch.
