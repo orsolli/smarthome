@@ -251,7 +251,7 @@ def api_bars_endpoint(scan_id: int, drv_path: str | None = None) -> str:
             return ""
         children_map = _children_map(nodes)
         severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        start, end = timeseries.get_scan_window(conn)
+        start, end = timeseries.get_scan_window(conn, scan_id)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
 
     if drv_path is None:
@@ -294,7 +294,7 @@ def api_children_endpoint(
             return ""
         children_map = _children_map(nodes)
         severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        start, end = timeseries.get_scan_window(conn)
+        start, end = timeseries.get_scan_window(conn, scan_id)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id)
 
     parent = next((n for n in nodes if n["drv_path"] == drv_path), None)

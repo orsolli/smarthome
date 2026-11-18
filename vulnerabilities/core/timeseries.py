@@ -228,6 +228,7 @@ def _find_counterpart(
 def get_tree_subtree_timelines(
     conn: sqlite3.Connection,
     scan_id: int,
+    since: datetime | str | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """Get subtree-aggregated timelines for every node of a scan's tree.
 
@@ -240,6 +241,8 @@ def get_tree_subtree_timelines(
     Args:
         conn: Database connection.
         scan_id: Scan whose dependency tree defines the structure.
+        since: Optional cutoff. Scans before it are not bar boundaries, which
+            is what makes a bar zoom into a recent window.
 
     Returns:
         Dict mapping drv_path -> list of dicts with keys:
@@ -251,16 +254,15 @@ def get_tree_subtree_timelines(
     if not nodes:
         return {}
 
-    target_scans = [
-        (scan_id_row, timestamp)
-        for scan_id_row, timestamp in conn.execute(
-            """SELECT s.id, s.timestamp
+    cutoff = since.isoformat() if isinstance(since, datetime) else since
+    query = """SELECT s.id, s.timestamp
                FROM scans s
-               WHERE s.target = (SELECT target FROM scans WHERE id = ?)
-               ORDER BY s.timestamp""",
-            (scan_id,),
-        ).fetchall()
-    ]
+               WHERE s.target = (SELECT target FROM scans WHERE id = ?)"""
+    params: list[Any] = [scan_id]
+    if cutoff is not None:
+        query += " AND s.timestamp >= ?"
+        params.append(cutoff)
+    target_scans = conn.execute(query + " ORDER BY s.timestamp", params).fetchall()
 
     scan_data: dict[int, dict[str, Any]] = {}
     for other_id, timestamp in target_scans:
@@ -327,19 +329,39 @@ def get_subtree_timeseries(
 
 def get_scan_window(
     conn: sqlite3.Connection,
+    scan_id: int | None = None,
+    since: datetime | str | None = None,
     pad_days: int = 1,
 ) -> tuple[datetime, datetime]:
-    """Earliest and latest scan timestamps, padded for chart rendering.
+    """Earliest and latest scan timestamps of one target, padded for rendering.
 
     Args:
         conn: Database connection.
+        scan_id: Scan whose target defines the window. Omit to cover every scan
+            in the database.
+        since: Optional cutoff; scans before it are not part of the window, so
+            a bar zoomed into a recent month spans only that month.
         pad_days: Days to add on each side of the window.
 
     Returns:
-        (start, end) datetime pair covering every scan.
+        (start, end) datetime pair. A target with no scans in the window gets
+        an open-ended window.
     """
-    cursor = conn.execute("SELECT MIN(timestamp), MAX(timestamp) FROM scans")
-    lowest, highest = cursor.fetchone()
+    conditions: list[str] = []
+    params: list[Any] = []
+
+    if scan_id is not None:
+        conditions.append("target = (SELECT target FROM scans WHERE id = ?)")
+        params.append(scan_id)
+    if since is not None:
+        conditions.append("timestamp >= ?")
+        params.append(since.isoformat() if isinstance(since, datetime) else since)
+
+    query = "SELECT MIN(timestamp), MAX(timestamp) FROM scans"
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    lowest, highest = conn.execute(query, params).fetchone()
     if lowest is None or highest is None:
         return datetime.min, datetime.max
     return _parse_iso(lowest) - timedelta(days=pad_days), _parse_iso(highest) + timedelta(days=pad_days)

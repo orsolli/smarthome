@@ -227,7 +227,7 @@ class TestScanPipelineWithCustomStages(unittest.TestCase):
                 current = self._next
                 self._next += 1
                 return current
-            def insert_scan(self, target, timestamp=None):
+            def insert_scan(self, target, timestamp=None, scanned_path=None):
                 return self._next_id()
             def insert_vulnerability_event(self, scan_id, package_name, drv_path, severity, version=None, timestamp=None):
                 return self._next_id()
@@ -283,6 +283,10 @@ class TestScanIdentity(unittest.TestCase):
         self.assertEqual(result["target"], "/run/current-system")
         self.assertEqual(result["scanned_path"], "/nix/var/nix/profiles/system-2-link")
         self.assertEqual(storage._scans[0]["target"], "/run/current-system")
+        self.assertEqual(
+            storage._scans[0]["scanned_path"],
+            "/nix/var/nix/profiles/system-2-link",
+        )
 
     def test_backfill_keeps_the_activation_date(self):
         """Events are dated when the scan ran, not when it was replayed."""

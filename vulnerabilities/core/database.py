@@ -16,13 +16,15 @@ from datetime import datetime
 from typing import Any
 
 from core.identity import compressed_lineages, version_from_drv
+from core.severity import aggregate_severity
 
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS scans (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT NOT NULL,
-    target TEXT NOT NULL
+    target TEXT NOT NULL,
+    scanned_path TEXT
 );
 
 CREATE TABLE IF NOT EXISTS vulnerability_events (
@@ -55,6 +57,7 @@ CREATE TABLE IF NOT EXISTS dependency_tree (
 
 # Columns added to databases created before cross-scan node identity existed.
 ADDED_COLUMNS: dict[str, dict[str, str]] = {
+    "scans": {"scanned_path": "TEXT"},
     "vulnerability_events": {"version": "TEXT"},
     "dependency_tree": {"version": "TEXT", "lineage": "TEXT"},
 }
@@ -98,6 +101,7 @@ def insert_scan(
     conn: sqlite3.Connection,
     target: str,
     timestamp: str | None = None,
+    scanned_path: str | None = None,
 ) -> int:
     """Insert a scan record and return its ID.
 
@@ -108,15 +112,21 @@ def insert_scan(
         timestamp: ISO timestamp of the scan. Defaults to now, but a
             backfill of an old Nix generation passes the date that
             generation was activated.
+        scanned_path: The derivation path actually handed to vulnix. For a
+            backfilled generation this is a profile link such as
+            /nix/var/nix/profiles/system-3-link, while `target` stays
+            /run/current-system. Defaults to the target.
 
     Returns:
         The ID of the inserted scan.
     """
     if timestamp is None:
         timestamp = datetime.utcnow().isoformat()
+    if scanned_path is None:
+        scanned_path = target
     cursor = conn.execute(
-        "INSERT INTO scans (timestamp, target) VALUES (?, ?)",
-        (timestamp, target),
+        "INSERT INTO scans (timestamp, target, scanned_path) VALUES (?, ?, ?)",
+        (timestamp, target, scanned_path),
     )
     conn.commit()
     return cursor.lastrowid or 0
@@ -326,26 +336,77 @@ def backfill_identities(conn: sqlite3.Connection) -> int:
     return len(scan_ids)
 
 
-def get_scans_for_target(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any]]:
+def get_scans_for_target(
+    conn: sqlite3.Connection,
+    scan_id: int,
+    since: str | None = None,
+) -> list[dict[str, Any]]:
     """Get every scan of the target the given scan belongs to, oldest first.
 
     Args:
         conn: Database connection.
         scan_id: Scan whose target to look up.
+        since: Optional ISO timestamp; scans before it are left out, which is
+            how the UI zooms a timeline into a recent window.
 
     Returns:
-        List of dicts with keys: id, timestamp, target.
+        List of dicts with keys: id, timestamp, target, scanned_path.
     """
-    cursor = conn.execute(
-        """SELECT id, timestamp, target
-           FROM scans
-           WHERE target = (SELECT target FROM scans WHERE id = ?)
-           ORDER BY timestamp""",
-        (scan_id,),
-    )
+    query = """SELECT id, timestamp, target, scanned_path
+              FROM scans
+              WHERE target = (SELECT target FROM scans WHERE id = ?)"""
+    params: list[Any] = [scan_id]
+    if since is not None:
+        query += " AND timestamp >= ?"
+        params.append(since)
+    cursor = conn.execute(query + " ORDER BY timestamp", params)
     rows = cursor.fetchall()
     columns = [desc[0] for desc in cursor.description]
     return [dict(zip(columns, row)) for row in rows]
+
+
+def list_targets(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """One row per scanned identity, most recently scanned first.
+
+    A machine rebuilt eighteen times is one target with eighteen scans, so the
+    unit worth listing is the identity rather than the individual scan.
+
+    Args:
+        conn: Database connection.
+
+    Returns:
+        List of dicts with keys: target, scan_count, first_scan, last_scan,
+        latest_scan_id, worst_severity. `worst_severity` is the worst severity
+        recorded in the latest scan of the target, i.e. its current status, not
+        the worst it ever had.
+    """
+    cursor = conn.execute(
+        """SELECT target,
+                  COUNT(*) AS scan_count,
+                  MIN(timestamp) AS first_scan,
+                  MAX(timestamp) AS last_scan,
+                  (SELECT id FROM scans s2
+                   WHERE s2.target = s.target
+                   ORDER BY s2.timestamp DESC, s2.id DESC
+                   LIMIT 1) AS latest_scan_id
+           FROM scans s
+           GROUP BY target
+           ORDER BY last_scan DESC"""
+    )
+    columns = [desc[0] for desc in cursor.description]
+    targets = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+    for target in targets:
+        severities = [
+            row[0]
+            for row in conn.execute(
+                "SELECT severity FROM vulnerability_events WHERE scan_id = ?",
+                (target["latest_scan_id"],),
+            )
+        ]
+        target["worst_severity"] = aggregate_severity(severities)
+
+    return targets
 
 
 def get_vulnerabilities_since(

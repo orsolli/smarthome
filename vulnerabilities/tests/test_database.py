@@ -1,6 +1,7 @@
 """Tests for database module."""
 
 import os
+import sqlite3
 import tempfile
 import unittest
 
@@ -13,6 +14,7 @@ from core.database import (
     get_vulnerabilities_since,
     get_dependency_tree_for_scan,
     get_scans_for_target,
+    list_targets,
     backfill_identities,
 )
 
@@ -204,6 +206,52 @@ class TestNodeIdentity(unittest.TestCase):
         self.assertEqual([scan["id"] for scan in scans], [a, b])
         self.assertEqual(scans[0]["target"], "/run/current-system")
 
+    def test_scanned_path_records_the_generation_scanned(self):
+        """`target` is the identity, `scanned_path` the derivation actually read."""
+        scan_id = insert_scan(
+            self.conn,
+            "/run/current-system",
+            timestamp="2024-11-01T15:48:40",
+            scanned_path="/nix/var/nix/profiles/system-3-link",
+        )
+        row = self.conn.execute(
+            "SELECT target, scanned_path FROM scans WHERE id = ?", (scan_id,)
+        ).fetchone()
+        self.assertEqual(
+            row, ("/run/current-system", "/nix/var/nix/profiles/system-3-link")
+        )
+
+    def test_scanned_path_defaults_to_the_target(self):
+        scan_id = insert_scan(self.conn, "./result")
+        row = self.conn.execute(
+            "SELECT scanned_path FROM scans WHERE id = ?", (scan_id,)
+        ).fetchone()
+        self.assertEqual(row[0], "./result")
+
+    def test_scans_for_target_carry_their_scanned_path(self):
+        a = insert_scan(
+            self.conn, "/run/current-system",
+            scanned_path="/nix/var/nix/profiles/system-2-link",
+        )
+        insert_scan(self.conn, "./other")
+        b = insert_scan(
+            self.conn, "/run/current-system",
+            scanned_path="/nix/var/nix/profiles/system-3-link",
+        )
+        scans = get_scans_for_target(self.conn, a)
+        self.assertEqual([scan["id"] for scan in scans], [a, b])
+        self.assertEqual(
+            [scan["scanned_path"] for scan in scans],
+            ["/nix/var/nix/profiles/system-2-link", "/nix/var/nix/profiles/system-3-link"],
+        )
+
+    def test_scans_for_target_can_be_cut_at_a_date(self):
+        a = insert_scan(self.conn, "/run/current-system", timestamp="2024-01-01T00:00:00")
+        insert_scan(self.conn, "/run/current-system", timestamp="2024-06-01T00:00:00")
+        insert_scan(self.conn, "./other", timestamp="2024-09-01T00:00:00")
+        scans = get_scans_for_target(self.conn, a, since="2024-03-01T00:00:00")
+        self.assertEqual([scan["timestamp"] for scan in scans], ["2024-06-01T00:00:00"])
+
     def test_backfill_computes_lineages_for_legacy_rows(self):
         """Rows written before node identity existed get version and lineage."""
         scan_id = insert_scan(self.conn, "/run/current-system")
@@ -239,6 +287,99 @@ class TestNodeIdentity(unittest.TestCase):
         self.assertEqual(backfill_identities(self.conn), 0)
         again = {n["id"]: n for n in get_dependency_tree_for_scan(self.conn, scan_id)}
         self.assertEqual(again[gcc]["lineage"], nodes[gcc]["lineage"])
+
+
+class TestTargetList(unittest.TestCase):
+    """One row per scanned identity, most recently scanned first."""
+
+    HASH = "abcdefghijklmnopqrstuvwxyz01234567"
+
+    def setUp(self):
+        self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
+        self.conn = init_db(self.db_path)
+
+        self.old = insert_scan(
+            self.conn, "/run/current-system",
+            timestamp="2024-10-14T08:21:14",
+            scanned_path="/nix/var/nix/profiles/system-2-link",
+        )
+        self.latest = insert_scan(
+            self.conn, "/run/current-system",
+            timestamp="2024-11-17T19:16:29",
+            scanned_path="/nix/var/nix/profiles/system-5-link",
+        )
+        self.dotfiles = insert_scan(
+            self.conn, "~/.dotfiles/result-example",
+            timestamp="2024-11-19T10:00:00",
+        )
+
+        insert_vulnerability_event(
+            self.conn, self.old, "perl", f"/nix/store/{self.HASH}-perl-5.34.drv", "CRITICAL"
+        )
+        insert_vulnerability_event(
+            self.conn, self.latest, "jq", f"/nix/store/{self.HASH}-jq-1.7.drv", "MEDIUM"
+        )
+        insert_vulnerability_event(
+            self.conn, self.dotfiles, "fontforge",
+            f"/nix/store/{self.HASH}-fontforge-2.4.drv", "HIGH"
+        )
+
+    def tearDown(self):
+        self.conn.close()
+        try:
+            os.close(self.db_fd)
+        except Exception:
+            pass
+        os.unlink(self.db_path)
+
+    def test_each_target_is_listed_once(self):
+        targets = list_targets(self.conn)
+        self.assertEqual(
+            [target["target"] for target in targets],
+            ["~/.dotfiles/result-example", "/run/current-system"],
+        )
+
+    def test_counts_and_dates_of_a_target(self):
+        system = next(t for t in list_targets(self.conn) if t["target"] == "/run/current-system")
+        self.assertEqual(system["scan_count"], 2)
+        self.assertEqual(system["first_scan"], "2024-10-14T08:21:14")
+        self.assertEqual(system["last_scan"], "2024-11-17T19:16:29")
+        self.assertEqual(system["latest_scan_id"], self.latest)
+
+    def test_worst_severity_is_that_of_the_latest_scan(self):
+        """The list is a current status, not the history of every generation."""
+        system = next(t for t in list_targets(self.conn) if t["target"] == "/run/current-system")
+        self.assertEqual(system["worst_severity"], "MEDIUM")
+
+    def test_a_target_with_no_vulnerabilities_is_clean(self):
+        insert_scan(self.conn, "./empty-result", timestamp="2024-11-20T00:00:00")
+        empty = next(t for t in list_targets(self.conn) if t["target"] == "./empty-result")
+        self.assertEqual(empty["worst_severity"], "NONE")
+        self.assertEqual(empty["scan_count"], 1)
+
+    def test_a_database_without_scanned_path_is_upgraded(self):
+        """Databases created before the column exists keep their rows."""
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+        legacy = sqlite3.connect(path)
+        legacy.execute(
+            "CREATE TABLE scans (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "timestamp TEXT NOT NULL, target TEXT NOT NULL)"
+        )
+        legacy.execute(
+            "INSERT INTO scans (timestamp, target) VALUES ('2024-10-14T08:21:14', '/run/current-system')"
+        )
+        legacy.commit()
+        legacy.close()
+
+        conn = init_db(path)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(scans)")}
+        self.assertIn("scanned_path", columns)
+        row = conn.execute("SELECT target FROM scans").fetchone()
+        self.assertEqual(row[0], "/run/current-system")
+        conn.close()
+        os.unlink(path)
 
 
 if __name__ == "__main__":

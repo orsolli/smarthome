@@ -27,17 +27,25 @@ class DatabaseStorage(StorageInterface):
         self.db_path = db_path
         self.conn = database.init_db(db_path)
 
-    def insert_scan(self, target: str, timestamp: str | None = None) -> int:
+    def insert_scan(
+        self,
+        target: str,
+        timestamp: str | None = None,
+        scanned_path: str | None = None,
+    ) -> int:
         """Insert a scan record and return its ID.
 
         Args:
             target: The identity of what was scanned.
             timestamp: ISO timestamp, defaults to now.
+            scanned_path: The derivation path actually handed to vulnix,
+                which differs from the target when an old generation is
+                scanned under an alias. Defaults to the target.
 
         Returns:
             The ID of the inserted scan.
         """
-        return database.insert_scan(self.conn, target, timestamp)
+        return database.insert_scan(self.conn, target, timestamp, scanned_path)
 
     def insert_vulnerability_event(
         self,

@@ -50,9 +50,21 @@ class MockStorage(StorageInterface):
         self._next_id_counter += 1
         return current
 
-    def insert_scan(self, target: str, timestamp: str | None = None) -> int:
+    def insert_scan(
+        self,
+        target: str,
+        timestamp: str | None = None,
+        scanned_path: str | None = None,
+    ) -> int:
         scan_id = self._next_id()
-        self._scans.append({"id": scan_id, "target": target, "timestamp": timestamp})
+        self._scans.append(
+            {
+                "id": scan_id,
+                "target": target,
+                "timestamp": timestamp,
+                "scanned_path": scanned_path or target,
+            }
+        )
         return scan_id
 
     def insert_vulnerability_event(
@@ -276,7 +288,7 @@ class ScanPipeline:
         # Step 6: Persist to storage. Events inherit the scan timestamp so a
         # backfilled generation is dated when it ran, not when it was scanned.
         scan_time = timestamp or datetime.utcnow().isoformat()
-        scan_id = self.storage.insert_scan(identity, scan_time)
+        scan_id = self.storage.insert_scan(identity, scan_time, scanned_path=target)
         for record in vulnerability_events:
             record['event_id'] = self.storage.insert_vulnerability_event(
                 scan_id,

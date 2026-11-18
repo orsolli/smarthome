@@ -4,7 +4,7 @@ import os
 import sqlite3
 import tempfile
 import unittest
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from core import database
 from core import timeseries
@@ -289,6 +289,64 @@ class TestSubtreeTimeseries(unittest.TestCase):
             os.unlink(empty_path)
 
 
+class TestScanWindow(unittest.TestCase):
+    """The chart window is one target's scans, optionally cut at a date."""
+
+    def setUp(self):
+        self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(self.db_fd)
+        self.conn = database.init_db(self.db_path)
+
+        self.system = database.insert_scan(
+            self.conn, "/run/current-system", timestamp="2024-10-14T00:00:00"
+        )
+        self.latest = database.insert_scan(
+            self.conn, "/run/current-system", timestamp="2024-11-17T00:00:00"
+        )
+        # A different machine, scanned after the system was last rebuilt.
+        self.dotfiles = database.insert_scan(
+            self.conn, "~/.dotfiles/result", timestamp="2024-12-01T00:00:00"
+        )
+
+    def tearDown(self):
+        self.conn.close()
+        try:
+            os.close(self.db_fd)
+        except Exception:
+            pass
+        os.unlink(self.db_path)
+
+    def test_window_is_the_targets_first_and_last_scan(self):
+        start, end = timeseries.get_scan_window(self.conn, self.latest)
+        self.assertEqual(start, datetime(2024, 10, 13, 0, 0, 0))
+        self.assertEqual(end, datetime(2024, 11, 18, 0, 0, 0))
+
+    def test_an_unrelated_target_does_not_widen_the_window(self):
+        _, end = timeseries.get_scan_window(self.conn, self.latest)
+        self.assertLess(end, datetime(2024, 12, 1, 0, 0, 0))
+
+    def test_padding_is_configurable(self):
+        start, end = timeseries.get_scan_window(self.conn, self.latest, pad_days=0)
+        self.assertEqual((start, end), (datetime(2024, 10, 14), datetime(2024, 11, 17)))
+
+    def test_since_cuts_the_start_of_the_window(self):
+        """Scans before the cutoff are gone, so the bar starts at the first scan left."""
+        start, end = timeseries.get_scan_window(
+            self.conn, self.latest, since=datetime(2024, 11, 1)
+        )
+        self.assertEqual(start, datetime(2024, 11, 16, 0, 0, 0))
+        self.assertEqual(end, datetime(2024, 11, 18, 0, 0, 0))
+
+    def test_window_without_a_scan_id_covers_every_scan(self):
+        start, end = timeseries.get_scan_window(self.conn)
+        self.assertEqual(end, datetime(2024, 12, 2, 0, 0, 0))
+        self.assertLess(start, datetime(2024, 10, 14, 0, 0, 0))
+
+    def test_unknown_scan_id_has_an_open_window(self):
+        start, end = timeseries.get_scan_window(self.conn, 9999)
+        self.assertEqual((start, end), (datetime.min, datetime.max))
+
+
 class TestCrossScanMatching(unittest.TestCase):
     """The fallback rules that recognise a node in an older scan of a target."""
 
@@ -313,12 +371,12 @@ class TestCrossScanMatching(unittest.TestCase):
         except Exception:
             pass
 
-    def _scan(self, target, specs):
+    def _scan(self, target, specs, timestamp=None):
         """Insert one scan. specs: (name, version, lineage[, parent_index]).
 
         Returns (scan_id, {(name, version): drv_path}).
         """
-        scan_id = database.insert_scan(self.conn, target)
+        scan_id = database.insert_scan(self.conn, target, timestamp=timestamp)
         drv_paths: dict[tuple[str, str], str] = {}
         node_ids: list[int] = []
         for index, spec in enumerate(specs):
@@ -437,6 +495,29 @@ class TestCrossScanMatching(unittest.TestCase):
         timelines = timeseries.get_tree_subtree_timelines(self.conn, current)
         self.assertEqual(self._severity_of(timelines, current_drv[("system", "")]), ["HIGH", "NONE"])
         self.assertEqual(self._severity_of(timelines, current_drv[("curl", "8.6.0")]), ["HIGH", "NONE"])
+
+    def test_scans_before_a_cutoff_are_not_bar_boundaries(self):
+        """Zooming into a recent window drops the older scans of the target."""
+        older, older_drv = self._scan(
+            "./result", [("gcc", "9.99.0", "./result/strata/gcc")],
+            timestamp="2024-01-01T00:00:00",
+        )
+        current, current_drv = self._scan(
+            "./result", [("gcc", "15.4.0", "./result/strata/gcc")],
+            timestamp="2024-11-17T00:00:00",
+        )
+        database.insert_vulnerability_event(
+            self.conn, older, "gcc", older_drv[("gcc", "9.99.0")], "HIGH"
+        )
+
+        drv = current_drv[("gcc", "15.4.0")]
+        full = timeseries.get_tree_subtree_timelines(self.conn, current)
+        zoomed = timeseries.get_tree_subtree_timelines(
+            self.conn, current, since=datetime(2024, 11, 1)
+        )
+        self.assertEqual([e["scan_id"] for e in full[drv]], [older, current])
+        self.assertEqual([e["scan_id"] for e in zoomed[drv]], [current])
+        self.assertEqual([e["severity"] for e in zoomed[drv]], ["NONE"])
 
 
 if __name__ == "__main__":

@@ -117,12 +117,19 @@ class StorageInterface(ABC):
     """
 
     @abstractmethod
-    def insert_scan(self, target: str, timestamp: str | None = None) -> int:
+    def insert_scan(
+        self,
+        target: str,
+        timestamp: str | None = None,
+        scanned_path: str | None = None,
+    ) -> int:
         """Insert a scan record and return its ID.
 
         Args:
             target: The identity of what was scanned.
             timestamp: ISO timestamp, defaults to now.
+            scanned_path: The derivation path actually handed to the scanner.
+                Defaults to the target.
         """
         ...
 
