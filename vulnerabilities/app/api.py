@@ -11,7 +11,7 @@ Provides HTMX-compatible endpoints for:
 """
 
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from app.chart import mini_bar_html
 from app.colors import severity_rank
@@ -28,28 +28,6 @@ def _get_db():
         str(Path.home() / ".local" / "share" / "vulnerabilities" / "vulnerabilities.db"),
     )
     return database.init_db(db_path)
-
-
-def _window(
-    conn,
-    scan_id: int,
-    days: int | None,
-) -> tuple[str | None, datetime, datetime]:
-    """Chart window for one target, zoomed to the last `days` days when given.
-
-    Args:
-        conn: Database connection.
-        scan_id: Scan whose target defines the window.
-        days: Length of the window in days, or None for the whole history.
-
-    Returns:
-        (since, start, end): the cutoff the timeline queries apply, and the
-        padded range the bars are drawn in.
-    """
-    _, latest = timeseries.get_scan_window(conn, scan_id)
-    since = (latest - timedelta(days=days)).isoformat() if days else None
-    start, end = timeseries.get_scan_window(conn, scan_id, since)
-    return since, start, end
 
 
 def index_endpoint():
@@ -287,7 +265,7 @@ def api_bars_endpoint(
             return ""
         children_map = _children_map(nodes)
         severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        since, start, end = _window(conn, scan_id, days)
+        since, start, end = timeseries.get_zoom_window(conn, scan_id, days)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id, since=since)
 
     if drv_path is None:
@@ -332,7 +310,7 @@ def api_children_endpoint(
             return ""
         children_map = _children_map(nodes)
         severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        since, start, end = _window(conn, scan_id, days)
+        since, start, end = timeseries.get_zoom_window(conn, scan_id, days)
         timelines = timeseries.get_tree_subtree_timelines(conn, scan_id, since=since)
 
     parent = next((n for n in nodes if n["drv_path"] == drv_path), None)

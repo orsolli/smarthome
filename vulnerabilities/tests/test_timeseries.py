@@ -260,45 +260,23 @@ class TestSubtreeTimeseries(unittest.TestCase):
         scan_ids = {row["scan_id"] for entry in timelines.values() for row in entry}
         self.assertEqual(scan_ids, {self.scan1, self.scan2})
 
-    def test_scan_window_spans_all_scans(self):
-        """The chart window covers every scan, padded by a day."""
-        start, end = timeseries.get_scan_window(self.conn)
-        cursor = self.conn.execute(
-            "SELECT MIN(timestamp), MAX(timestamp) FROM scans"
-        )
-        lowest, highest = cursor.fetchone()
-        self.assertEqual(start, timeseries._parse_iso(lowest) - timedelta(days=1))
-        self.assertEqual(end, timeseries._parse_iso(highest) + timedelta(days=1))
 
-    def test_scan_window_with_no_scans(self):
-        """An empty database yields a degenerate window instead of crashing."""
-        empty_fd, empty_path = tempfile.mkstemp(suffix=".db")
-        os.close(empty_fd)
-        conn = database.init_db(empty_path)
-        try:
-            start, end = timeseries.get_scan_window(conn)
-            self.assertLess(start, end)
-        finally:
-            conn.close()
-            os.unlink(empty_path)
-
-
-class TestScanWindow(unittest.TestCase):
-    """The chart window is one target's scans, optionally cut at a date."""
+class TestZoomWindow(unittest.TestCase):
+    """The chart window is one target's scans, zoomed to the last N days."""
 
     def setUp(self):
         self.db_fd, self.db_path = tempfile.mkstemp(suffix=".db")
         os.close(self.db_fd)
         self.conn = database.init_db(self.db_path)
 
-        self.system = database.insert_scan(
+        database.insert_scan(
             self.conn, "/run/current-system", timestamp="2024-10-14T00:00:00"
         )
         self.latest = database.insert_scan(
             self.conn, "/run/current-system", timestamp="2024-11-17T00:00:00"
         )
         # A different machine, scanned after the system was last rebuilt.
-        self.dotfiles = database.insert_scan(
+        database.insert_scan(
             self.conn, "~/.dotfiles/result", timestamp="2024-12-01T00:00:00"
         )
 
@@ -311,34 +289,53 @@ class TestScanWindow(unittest.TestCase):
         os.unlink(self.db_path)
 
     def test_window_is_the_targets_first_and_last_scan(self):
-        start, end = timeseries.get_scan_window(self.conn, self.latest)
-        self.assertEqual(start, datetime(2024, 10, 13, 0, 0, 0))
-        self.assertEqual(end, datetime(2024, 11, 18, 0, 0, 0))
+        since, start, end = timeseries.get_zoom_window(self.conn, self.latest)
+        self.assertIsNone(since)
+        self.assertEqual(start, datetime(2024, 10, 13))
+        self.assertEqual(end, datetime(2024, 11, 18))
 
     def test_an_unrelated_target_does_not_widen_the_window(self):
-        _, end = timeseries.get_scan_window(self.conn, self.latest)
-        self.assertLess(end, datetime(2024, 12, 1, 0, 0, 0))
+        _, _, end = timeseries.get_zoom_window(self.conn, self.latest)
+        self.assertLess(end, datetime(2024, 12, 1))
+
+    def test_days_cut_the_start_of_the_window(self):
+        """Thirty days back drops the October scan, so the bar starts in November."""
+        since, start, end = timeseries.get_zoom_window(self.conn, self.latest, days=30)
+        self.assertEqual(since, "2024-10-18T00:00:00")
+        self.assertEqual(start, datetime(2024, 11, 16))
+        self.assertEqual(end, datetime(2024, 11, 18))
+
+    def test_a_window_wider_than_the_history_is_the_whole_history(self):
+        """A cutoff older than the first scan changes nothing."""
+        whole = timeseries.get_zoom_window(self.conn, self.latest)
+        zoomed = timeseries.get_zoom_window(self.conn, self.latest, days=400)
+        self.assertEqual(zoomed[1:], whole[1:])
+        self.assertEqual(
+            zoomed[0],
+            (datetime(2024, 11, 17) - timedelta(days=400)).isoformat(),
+        )
 
     def test_padding_is_configurable(self):
-        start, end = timeseries.get_scan_window(self.conn, self.latest, pad_days=0)
+        _, start, end = timeseries.get_zoom_window(self.conn, self.latest, pad_days=0)
         self.assertEqual((start, end), (datetime(2024, 10, 14), datetime(2024, 11, 17)))
 
-    def test_since_cuts_the_start_of_the_window(self):
-        """Scans before the cutoff are gone, so the bar starts at the first scan left."""
-        start, end = timeseries.get_scan_window(
-            self.conn, self.latest, since=datetime(2024, 11, 1)
-        )
-        self.assertEqual(start, datetime(2024, 11, 16, 0, 0, 0))
-        self.assertEqual(end, datetime(2024, 11, 18, 0, 0, 0))
-
-    def test_window_without_a_scan_id_covers_every_scan(self):
-        start, end = timeseries.get_scan_window(self.conn)
-        self.assertEqual(end, datetime(2024, 12, 2, 0, 0, 0))
-        self.assertLess(start, datetime(2024, 10, 14, 0, 0, 0))
-
     def test_unknown_scan_id_has_an_open_window(self):
-        start, end = timeseries.get_scan_window(self.conn, 9999)
-        self.assertEqual((start, end), (datetime.min, datetime.max))
+        self.assertEqual(
+            timeseries.get_zoom_window(self.conn, 9999),
+            (None, datetime.min, datetime.max),
+        )
+
+    def test_an_empty_database_has_an_open_window(self):
+        """A scan id that has never been recorded yields a degenerate window."""
+        empty_fd, empty_path = tempfile.mkstemp(suffix=".db")
+        os.close(empty_fd)
+        conn = database.init_db(empty_path)
+        try:
+            start, end = timeseries.get_zoom_window(conn, 1)[1:]
+            self.assertLess(start, end)
+        finally:
+            conn.close()
+            os.unlink(empty_path)
 
 
 class TestCrossScanMatching(unittest.TestCase):

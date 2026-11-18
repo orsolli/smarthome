@@ -307,44 +307,49 @@ def get_tree_subtree_timelines(
     return timelines
 
 
-def get_scan_window(
+def get_zoom_window(
     conn: sqlite3.Connection,
-    scan_id: int | None = None,
-    since: datetime | str | None = None,
+    scan_id: int,
+    days: int | None = None,
     pad_days: int = 1,
-) -> tuple[datetime, datetime]:
-    """Earliest and latest scan timestamps of one target, padded for rendering.
+) -> tuple[str | None, datetime, datetime]:
+    """Chart window for one target, zoomed to the last `days` days when given.
+
+    The cutoff is `days` before the newest scan of the target, so it cannot be
+    written as a SQL predicate: it depends on a value that query is computing.
+    A target has few scans, so they are read in one query and cut here.
 
     Args:
         conn: Database connection.
-        scan_id: Scan whose target defines the window. Omit to cover every scan
-            in the database.
-        since: Optional cutoff; scans before it are not part of the window, so
-            a bar zoomed into a recent month spans only that month.
-        pad_days: Days to add on each side of the window.
+        scan_id: Scan whose target defines the window.
+        days: Length of the window in days, or None for the whole history.
+        pad_days: Days to add on each side, so the first and last scan are not
+            drawn as hairlines at the edges of a bar.
 
     Returns:
-        (start, end) datetime pair. A target with no scans in the window gets
-        an open-ended window.
+        (since, start, end): the ISO cutoff the timeline queries apply, None
+        when the whole history is in scope, and the padded range bars are drawn
+        in. A scan-less target gets an open-ended window.
     """
-    conditions: list[str] = []
-    params: list[Any] = []
+    timestamps = sorted(
+        _parse_iso(row[0])
+        for row in conn.execute(
+            """SELECT timestamp FROM scans
+               WHERE target = (SELECT target FROM scans WHERE id = ?)""",
+            (scan_id,),
+        )
+    )
+    if not timestamps:
+        return None, datetime.min, datetime.max
 
-    if scan_id is not None:
-        conditions.append("target = (SELECT target FROM scans WHERE id = ?)")
-        params.append(scan_id)
-    if since is not None:
-        conditions.append("timestamp >= ?")
-        params.append(since.isoformat() if isinstance(since, datetime) else since)
-
-    query = "SELECT MIN(timestamp), MAX(timestamp) FROM scans"
-    if conditions:
-        query += " WHERE " + " AND ".join(conditions)
-
-    lowest, highest = conn.execute(query, params).fetchone()
-    if lowest is None or highest is None:
-        return datetime.min, datetime.max
-    return _parse_iso(lowest) - timedelta(days=pad_days), _parse_iso(highest) + timedelta(days=pad_days)
+    latest = timestamps[-1]
+    since = latest - timedelta(days=days) if days else None
+    in_window = [ts for ts in timestamps if since is None or ts >= since]
+    return (
+        since.isoformat() if since else None,
+        in_window[0] - timedelta(days=pad_days),
+        latest + timedelta(days=pad_days),
+    )
 
 
 def get_aggregated_severity(
