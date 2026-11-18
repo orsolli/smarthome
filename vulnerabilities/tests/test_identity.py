@@ -60,6 +60,15 @@ class TestVersionFromDrv(unittest.TestCase):
             "3.12.7",
         )
 
+    def test_abi_suffix_belongs_to_the_version(self):
+        self.assertEqual(
+            version_from_drv(
+                "/nix/store/wkddrv000000000000000000000000000000-webkitgtk-9.99.0+abi=1.0.drv",
+                "webkitgtk",
+            ),
+            "9.99.0+abi=1.0",
+        )
+
     def test_package_name_does_not_match_path(self):
         self.assertEqual(
             version_from_drv(

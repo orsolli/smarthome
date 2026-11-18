@@ -366,6 +366,25 @@ class TestCrossScanMatching(unittest.TestCase):
         self.assertEqual([e["severity"] for e in entries], ["HIGH", "NONE"])
         self.assertEqual([e["version"] for e in entries], ["9.99.0", "15.4.0"])
 
+    def test_abi_variant_of_one_package_is_one_bar(self):
+        """webkitgtk rebuilt with a different ABI keeps its history."""
+        older, older_drv = self._scan(
+            "./result", [("webkitgtk", "2.54.1+abi=4.1", "./result/webkitgtk")]
+        )
+        current, current_drv = self._scan(
+            "./result", [("webkitgtk", "9.99.0+abi=1.0", "./result/webkitgtk")]
+        )
+        database.insert_vulnerability_event(
+            self.conn, older, "webkitgtk",
+            older_drv[("webkitgtk", "2.54.1+abi=4.1")], "CRITICAL"
+        )
+        timelines = timeseries.get_tree_subtree_timelines(self.conn, current)
+        entries = timelines[current_drv[("webkitgtk", "9.99.0+abi=1.0")]]
+        self.assertEqual([e["severity"] for e in entries], ["CRITICAL", "NONE"])
+        self.assertEqual(
+            [e["version"] for e in entries], ["2.54.1+abi=4.1", "9.99.0+abi=1.0"]
+        )
+
     def test_moved_package_matches_by_name_and_version(self):
         older, _ = self._scan("./result", [("gcc", "9.99.0", "./result/libiberty/gcc")])
         current, current_drv = self._scan("./result", [("gcc", "9.99.0", "./result/strata/gcc")])

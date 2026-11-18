@@ -32,13 +32,15 @@ def _count_indent(line: str) -> int:
 def _extract_name_from_path(path: str) -> tuple[str, str]:
     """Extract name-version and package name from a derivation path.
     
-    Splits on the last dash only if the suffix starts with a digit (version).
+    Splits at the first dash whose suffix starts with a digit (the version).
     Strips Nix hash prefix.
     
     For '/nix/store/xyz-ed-9.99.0.drv' returns ('ed', '9.99.0').
     For '/nix/store/xyz-some-lib-1.0-rc1.drv' returns ('some-lib', '1.0-rc1').
     For '/nix/store/xyz-some-lib.drv' returns ('some-lib', '').
     For '/nix/store/vulndrv0000000000000000000000000000-vuln-0.1.drv' returns ('vuln', '0.1').
+    For '...-glibc-2.44-25.drv' returns ('glibc', '2.44-25').
+    For '...-webkitgtk-9.99.0+abi=1.0.drv' returns ('webkitgtk', '9.99.0+abi=1.0').
     """
     import re
     
@@ -52,8 +54,10 @@ def _extract_name_from_path(path: str) -> tuple[str, str]:
     if filename.endswith('.drv'):
         filename = filename[:-4]
     
-    # Split on last dash only if suffix starts with a digit (version-like)
-    match = re.match(r'^(.+)-([0-9][\w.+-]*)$', filename)
+    # Split at the FIRST dash followed by a digit: a store name is
+    # <hash>-<pname>-<version>, and the version may itself contain dashes and
+    # characters that are not [0-9a-z], such as '9.99.0+abi=1.0'.
+    match = re.match(r'^(.+?)-([0-9].*)$', filename)
     if match:
         name, version = match.group(1), match.group(2)
         # Strip any alphanumeric Nix hash prefix (any length)
