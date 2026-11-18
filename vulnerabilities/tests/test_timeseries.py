@@ -202,11 +202,13 @@ class TestSubtreeTimeseries(unittest.TestCase):
         except Exception:
             pass
 
+    def _timeline(self, drv_path: str) -> list[dict]:
+        """Aggregated timeline of one node of scan 1's tree."""
+        return timeseries.get_tree_subtree_timelines(self.conn, self.scan1).get(drv_path, [])
+
     def test_root_subtree_aggregates_children(self):
         """Root subtree inherits the highest severity from any descendant."""
-        data = timeseries.get_subtree_timeseries(
-            self.conn, self.scan1, self.system_drv
-        )
+        data = self._timeline(self.system_drv)
         self.assertEqual(len(data), 2)
         severities = {row["scan_id"]: row["severity"] for row in data}
         self.assertEqual(severities[self.scan1], "HIGH")  # LOW (self) vs HIGH (child)
@@ -214,16 +216,12 @@ class TestSubtreeTimeseries(unittest.TestCase):
 
     def test_clean_scans_are_recorded_as_none(self):
         """A node present in a scan without vulnerabilities gets an explicit NONE."""
-        data = timeseries.get_subtree_timeseries(
-            self.conn, self.scan1, self.gzip_drv
-        )
+        data = self._timeline(self.gzip_drv)
         self.assertEqual([row["severity"] for row in data], ["NONE", "NONE"])
 
     def test_subtree_of_vulnerable_child(self):
         """Diff is clean in scan 1 and vulnerable in scan 2."""
-        data = timeseries.get_subtree_timeseries(
-            self.conn, self.scan1, self.diff1_drv
-        )
+        data = self._timeline(self.diff1_drv)
         self.assertEqual(len(data), 2)
         self.assertEqual(data[0]["severity"], "NONE")
         self.assertEqual(data[1]["severity"], "CRITICAL")
@@ -231,18 +229,14 @@ class TestSubtreeTimeseries(unittest.TestCase):
 
     def test_versions_of_matched_nodes_are_reported(self):
         """Each entry carries the version the node had in that scan."""
-        data = timeseries.get_subtree_timeseries(
-            self.conn, self.scan1, self.diff1_drv
-        )
+        data = self._timeline(self.diff1_drv)
         versions = {row["scan_id"]: row["version"] for row in data}
         self.assertEqual(versions[self.scan1], "9.99.0")
         self.assertEqual(versions[self.scan2], "1.0.3")
 
     def test_unknown_drv_path(self):
         """A drv path not in the tree yields an empty timeline."""
-        data = timeseries.get_subtree_timeseries(
-            self.conn, self.scan1, "/nix/store/unknown.drv"
-        )
+        data = self._timeline("/nix/store/unknown.drv")
         self.assertEqual(data, [])
 
     def test_tree_timelines_cover_every_node(self):

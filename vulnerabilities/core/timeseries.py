@@ -307,26 +307,6 @@ def get_tree_subtree_timelines(
     return timelines
 
 
-def get_subtree_timeseries(
-    conn: sqlite3.Connection,
-    scan_id: int,
-    drv_path: str,
-) -> list[dict[str, Any]]:
-    """Get the timeline of the subtree rooted at drv_path.
-
-    Convenience wrapper around get_tree_subtree_timelines for a single node.
-
-    Args:
-        conn: Database connection.
-        scan_id: Scan whose dependency tree defines the subtree.
-        drv_path: Derivation path of the subtree root node.
-
-    Returns:
-        List of dicts with keys: scan_id, timestamp, severity, version.
-    """
-    return get_tree_subtree_timelines(conn, scan_id).get(drv_path, [])
-
-
 def get_scan_window(
     conn: sqlite3.Connection,
     scan_id: int | None = None,

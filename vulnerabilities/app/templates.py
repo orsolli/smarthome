@@ -3,7 +3,6 @@
 import re
 
 from app.colors import SEVERITY_COLORS
-from core.severity import severity_from_cvss
 
 
 def node_dom_id(drv_path: str) -> str:
@@ -72,9 +71,6 @@ def base_html(title: str, sidebar: str = "", main: str = "") -> str:
         .chart-bar-label {{ width: 100px; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }}
         .chart-bar-track {{ flex: 1; height: 16px; background: #21262d; border-radius: 3px; overflow: hidden; display: flex; }}
         .chart-bar-segment {{ height: 100%; transition: width 0.3s; }}
-        .scan-list {{ margin: 8px 0; }}
-        .scan-item {{ padding: 4px 8px; font-size: 0.8rem; color: #8b949e; cursor: pointer; border-radius: 4px; }}
-        .scan-item:hover, .scan-item.active {{ background: #21262d; color: #58a6ff; }}
         .node-timeline {{ margin: 2px 0 6px 26px; }}
         .node-timeline:empty {{ display: none; }}
         .node-timeline .chart-bar-label {{ display: none; }}
@@ -182,63 +178,6 @@ def sidebar_html(
     </div>
 </div>
 """
-    return html
-
-
-def tree_node_html(
-    node: dict,
-    vuln_map: dict[str, dict],
-    expanded: bool = False,
-) -> str:
-    """Render a single tree node as HTML.
-
-    Args:
-        node: Tree node dict with pname, drv_path, children.
-        vuln_map: Dict mapping drv_path to vulnerability info.
-        expanded: Whether children are initially shown.
-
-    Returns:
-        HTML string for this node and its children.
-    """
-    pname = node.get("pname", "unknown")
-    drv_path = node.get("drv_path", "")
-    children = node.get("children", [])
-    has_children = len(children) > 0
-
-    # Determine severity
-    vuln_info = vuln_map.get(drv_path, {})
-    severity = "NONE"
-    if vuln_info:
-        cvss_scores = vuln_info.get("cvssv3_basescore", {})
-        max_score = max(cvss_scores.values()) if cvss_scores else 0.0
-        severity = severity_from_cvss(max_score)
-
-    node_id = node_dom_id(drv_path)
-    expand_class = "expanded" if expanded else ""
-    leaf_class = "leaf" if not has_children else ""
-
-    if has_children:
-        html = f"""<div class="tree-node" id="{node_id}">
-    <div class="tree-node-header" onclick="toggleNode('{node_id}')">
-        <span class="expand-icon {expand_class} {leaf_class}">&#9654;</span>
-        <span class="severity-dot sev-{severity}"></span>
-        <span class="pkg-name">{pname}</span>
-        <span class="sev-label">{severity}</span>
-    </div>
-    <div class="tree-children {expand_class}" id="{node_id}-children">"""
-        for child in children:
-            html += tree_node_html(child, vuln_map, expanded=False)
-        html += """</div>
-</div>"""
-    else:
-        html = f"""<div class="tree-node" id="{node_id}">
-    <div class="tree-node-header">
-        <span class="expand-icon {leaf_class}">&#9654;</span>
-        <span class="severity-dot sev-{severity}"></span>
-        <span class="pkg-name">{pname}</span>
-        <span class="sev-label">{severity}</span>
-    </div>
-</div>"""
     return html
 
 

@@ -4,8 +4,8 @@ import unittest
 
 from app.templates import (
     base_html,
+    node_dom_id,
     sidebar_html,
-    tree_node_html,
     tree_html,
 )
 
@@ -100,129 +100,6 @@ class TestSidebar(unittest.TestCase):
         self.assertNotIn("window-chips", sidebar_html(self.TARGETS))
 
 
-class TestTreeNodeHtml(unittest.TestCase):
-    """Tests for tree_node_html template."""
-
-    def test_leaf_node_no_children(self):
-        """Leaf node renders without expand arrow."""
-        node = {"pname": "test-pkg", "drv_path": "/nix/store/abc-test-1.0.drv"}
-        html = tree_node_html(node, {}, expanded=False)
-        self.assertIn("leaf", html)
-        self.assertNotIn("tree-children", html)
-
-    def test_parent_node_has_children(self):
-        """Parent node renders with expand arrow and children container."""
-        node = {
-            "pname": "parent-pkg",
-            "drv_path": "/nix/store/abc-parent-1.0.drv",
-            "children": [
-                {"pname": "child-pkg", "drv_path": "/nix/store/def-child-1.0.drv"}
-            ],
-        }
-        html = tree_node_html(node, {}, expanded=True)
-        self.assertIn("expanded", html)
-        self.assertIn("tree-children", html)
-
-    def test_critical_severity(self):
-        """Node with CVSS >= 9.0 gets CRITICAL severity."""
-        node = {
-            "pname": "vuln-pkg",
-            "drv_path": "/nix/store/abc-vuln-1.0.drv",
-            "children": [],
-        }
-        vuln_map = {
-            "/nix/store/abc-vuln-1.0.drv": {
-                "cvssv3_basescore": {"CVE-2024-001": 9.5}
-            }
-        }
-        html = tree_node_html(node, vuln_map)
-        self.assertIn("sev-CRITICAL", html)
-        self.assertIn("CRITICAL", html)
-
-    def test_high_severity(self):
-        """Node with CVSS >= 7.0 gets HIGH severity."""
-        node = {
-            "pname": "high-pkg",
-            "drv_path": "/nix/store/abc-high-1.0.drv",
-            "children": [],
-        }
-        vuln_map = {
-            "/nix/store/abc-high-1.0.drv": {
-                "cvssv3_basescore": {"CVE-2024-002": 7.5}
-            }
-        }
-        html = tree_node_html(node, vuln_map)
-        self.assertIn("sev-HIGH", html)
-        self.assertIn("HIGH", html)
-
-    def test_medium_severity(self):
-        """Node with CVSS >= 4.0 gets MEDIUM severity."""
-        node = {
-            "pname": "med-pkg",
-            "drv_path": "/nix/store/abc-med-1.0.drv",
-            "children": [],
-        }
-        vuln_map = {
-            "/nix/store/abc-med-1.0.drv": {
-                "cvssv3_basescore": {"CVE-2024-003": 5.0}
-            }
-        }
-        html = tree_node_html(node, vuln_map)
-        self.assertIn("sev-MEDIUM", html)
-        self.assertIn("MEDIUM", html)
-
-    def test_low_severity(self):
-        """Node with CVSS < 4.0 gets LOW severity."""
-        node = {
-            "pname": "low-pkg",
-            "drv_path": "/nix/store/abc-low-1.0.drv",
-            "children": [],
-        }
-        vuln_map = {
-            "/nix/store/abc-low-1.0.drv": {
-                "cvssv3_basescore": {"CVE-2024-004": 2.0}
-            }
-        }
-        html = tree_node_html(node, vuln_map)
-        self.assertIn("sev-LOW", html)
-        self.assertIn("LOW", html)
-
-    def test_none_severity(self):
-        """Node not in vuln_map gets NONE severity."""
-        node = {
-            "pname": "safe-pkg",
-            "drv_path": "/nix/store/abc-safe-1.0.drv",
-            "children": [],
-        }
-        html = tree_node_html(node, {})
-        self.assertIn("sev-NONE", html)
-        self.assertIn("NONE", html)
-
-    def test_recursive_children(self):
-        """Children are rendered recursively."""
-        node = {
-            "pname": "parent",
-            "drv_path": "/nix/store/abc-parent-1.0.drv",
-            "children": [
-                {
-                    "pname": "child1",
-                    "drv_path": "/nix/store/def-child1-1.0.drv",
-                    "children": [
-                        {
-                            "pname": "grandchild",
-                            "drv_path": "/nix/store/ghi-gc-1.0.drv",
-                            "children": [],
-                        }
-                    ],
-                }
-            ],
-        }
-        html = tree_node_html(node, {}, expanded=True)
-        self.assertIn("parent", html)
-        self.assertIn("child1", html)
-        self.assertIn("grandchild", html)
-
-
 class TestTreeHtml(unittest.TestCase):
     """Tests for tree_html template."""
 
@@ -255,10 +132,35 @@ class TestTreeHtml(unittest.TestCase):
 
     def test_base_html_returns_full_page(self):
         """base_html returns a full HTML page."""
-        html = base_html("Title", tree_html(1))
+        html = base_html("Title", main=tree_html(1))
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("<html", html)
         self.assertIn("</html>", html)
+
+
+class TestNodeDomId(unittest.TestCase):
+    """HTMX resolves an out-of-band swap with `#<id>`, so a node id carrying
+    `+` or `=` never matches and the node keeps an empty timeline."""
+
+    def test_characters_outside_a_css_identifier_are_flattened(self):
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-webkitgtk-9.99.0+abi=1.0.drv"),
+            "node-_nix_store_abc-webkitgtk-9_99_0_abi_1_0_drv",
+        )
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-xvfb-run-1+g87f6705.drv"),
+            "node-_nix_store_abc-xvfb-run-1_g87f6705_drv",
+        )
+
+    def test_a_path_without_odd_characters_only_flattens_slashes_and_dots(self):
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-firefox-125.0.drv"),
+            "node-_nix_store_abc-firefox-125_0_drv",
+        )
+        self.assertEqual(
+            node_dom_id("/nix/store/abc-system-path.drv"),
+            "node-_nix_store_abc-system-path_drv",
+        )
 
 
 if __name__ == "__main__":
