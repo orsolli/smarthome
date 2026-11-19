@@ -322,6 +322,19 @@ class TestChildrenLimit(unittest.TestCase):
         self.assertIn("pkg49", body)
         self.assertNotIn("pkg50", body)
 
+    def test_expansion_bars_stop_at_the_visible_limit(self):
+        """The 51st child is not in the DOM yet, so it gets no bar here; its
+        bar arrives with the "show more" response that renders it."""
+        status, body = self._get(f"/api/bars/{self.scan_id}{self.root_drv}")
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(body.count('hx-swap-oob="true"'), 50)
+        self.assertIn(
+            _node_id_for("/nix/store/pkg50.drv") + "-timeline", body
+        )
+        self.assertNotIn(
+            _node_id_for("/nix/store/pkg45.drv") + "-timeline", body
+        )
+
     def test_bootstrap_covers_visible_children(self):
         status, body = self._get(f"/api/bars/{self.scan_id}")
         self.assertEqual(status, "200 OK")

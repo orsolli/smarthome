@@ -281,6 +281,10 @@ def api_bars_endpoint(
 ) -> str:
     """HTMX out-of-band bars for a node's children (roots on tree load).
 
+    Only nodes that are in the DOM get a bar: a node's children beyond
+    MAX_VISIBLE_CHILDREN are not rendered yet, and their bars arrive with the
+    "show more" response that renders them.
+
     Args:
         scan_id: Scan whose dependency tree defines the structure.
         drv_path: Derivation path of the expanded node. Omit for the
@@ -299,14 +303,15 @@ def api_bars_endpoint(
         return ""
 
     if drv_path is None:
-        targets = ctx.roots()
-        for root in targets:
+        roots = ctx.roots()
+        targets = list(roots)
+        for root in roots:
             targets.extend(ctx.ordered_children(root)[:MAX_VISIBLE_CHILDREN])
     else:
         parent = ctx.node(_drv_path(drv_path))
         if parent is None:
             return ""
-        targets = ctx.ordered_children(parent)
+        targets = ctx.ordered_children(parent)[:MAX_VISIBLE_CHILDREN]
 
     return _bars_html(ctx, targets)
 
