@@ -15,9 +15,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.chart import mini_bar_html
-from app.colors import severity_rank
 from app.templates import base_html, node_dom_id, sidebar_html, tree_html, window_url
 from core import database, timeseries
+from core.severity import severity_rank
 
 
 def _get_db():

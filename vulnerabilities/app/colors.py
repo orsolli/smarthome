@@ -1,37 +1,14 @@
 """Severity colors for the frontend.
 
-The severity levels themselves live in core/severity.py; this module only
-exposes them as CSS values. Import from here for rendering, from
-core.severity for comparisons.
+The severity levels themselves live in core/severity.py. This module only
+pairs them with the CSS values templates paint with; import the helpers from
+core.severity for anything that compares or aggregates severities.
 """
 
-from core.severity import (
-    SEVERITY_RANK,
-    aggregate_severity,
-    severity_bg_color,
-    severity_color,
-    severity_from_cvss,
-    severity_label,
-    severity_rank,
-    severity_rgba,
-)
+from core.severity import SEVERITY_RANK, severity_bg_color, severity_color
 
-# Kept as a literal map so templates can iterate over it directly.
+# severity -> (solid color, row tint), in rank order.
 SEVERITY_COLORS: dict[str, tuple[str, str]] = {
     severity: (severity_color(severity), severity_bg_color(severity))
     for severity in SEVERITY_RANK
 }
-
-SEVERITY_ORDER: dict[str, int] = SEVERITY_RANK
-
-__all__ = [
-    "SEVERITY_COLORS",
-    "SEVERITY_ORDER",
-    "aggregate_severity",
-    "severity_bg_color",
-    "severity_color",
-    "severity_from_cvss",
-    "severity_label",
-    "severity_rank",
-    "severity_rgba",
-]
