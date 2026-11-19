@@ -7,6 +7,7 @@ from app.templates import (
     node_dom_id,
     sidebar_html,
     tree_html,
+    window_url,
 )
 
 
@@ -160,6 +161,20 @@ class TestNodeDomId(unittest.TestCase):
         self.assertEqual(
             node_dom_id("/nix/store/abc-system-path.drv"),
             "node-_nix_store_abc-system-path_drv",
+        )
+
+
+class TestWindowUrl(unittest.TestCase):
+    """Lazy HTMX URLs carry the window once, and nothing when it is the whole history."""
+
+    def test_no_window_writes_no_query(self):
+        self.assertEqual(window_url("/api/bars/3"), "/api/bars/3")
+        self.assertEqual(window_url("/scan/3", None), "/scan/3")
+
+    def test_the_window_composes_with_other_parameters(self):
+        self.assertEqual(
+            window_url("/api/children/3/nix/store/x.drv", 30, offset=50),
+            "/api/children/3/nix/store/x.drv?days=30&offset=50",
         )
 
 

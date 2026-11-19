@@ -302,6 +302,15 @@ class TestChildrenLimit(unittest.TestCase):
         self.assertIn("show 10 more children", body)
         self.assertIn('hx-get="/api/children/', body)
 
+    def test_show_more_url_carries_the_window_and_the_offset(self):
+        """The lazily loaded children must be zoomed like the bars already drawn."""
+        status, body = self._get(f"/api/tree/{self.scan_id}", query="days=30")
+        self.assertEqual(status, "200 OK")
+        self.assertIn(
+            f'hx-get="/api/children/{self.scan_id}{self.root_drv}?days=30&offset=50"',
+            body,
+        )
+
     def test_children_endpoint_returns_the_rest(self):
         status, body = self._get(
             f"/api/children/{self.scan_id}{self.root_drv}", "offset=50"

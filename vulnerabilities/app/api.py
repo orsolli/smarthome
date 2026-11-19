@@ -11,11 +11,12 @@ Provides HTMX-compatible endpoints for:
 """
 
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime
 
 from app.chart import mini_bar_html
 from app.colors import severity_rank
-from app.templates import base_html, node_dom_id, sidebar_html, tree_html
+from app.templates import base_html, node_dom_id, sidebar_html, tree_html, window_url
 from core import database, timeseries
 
 
@@ -66,23 +67,23 @@ def _children_map(nodes: list[dict]) -> dict[str, list[dict]]:
     return children
 
 
-def _vuln_map(conn, scan_id: int) -> dict[str, dict]:
-    """drv_path -> {"severity": ...} for a scan's vulnerability events."""
-    cursor = conn.execute(
-        "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
-        (scan_id,),
-    )
-    return {row[0]: {"severity": row[1]} for row in cursor.fetchall()}
+def _vuln_map(conn, scan_id: int) -> dict[str, str]:
+    """drv_path -> severity for a scan's vulnerability events."""
+    return {
+        drv_path: severity
+        for drv_path, severity in conn.execute(
+            "SELECT drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
+            (scan_id,),
+        )
+    }
 
 
 def _subtree_severities(
     nodes: list[dict],
-    vuln_map: dict[str, dict],
+    vuln_map: dict[str, str],
 ) -> dict[str, str]:
     """Aggregated severity per node: a node is as red as its worst descendant."""
-    severities = timeseries.subtree_severities(
-        nodes, {drv_path: info["severity"] for drv_path, info in vuln_map.items()}
-    )
+    severities = timeseries.subtree_severities(nodes, vuln_map)
     return {str(node_id): severity for node_id, severity in severities.items()}
 
 
@@ -101,38 +102,98 @@ def _ordered_children(
     )
 
 
-def _render_node(
-    node: dict,
-    children_map: dict[str, list[dict]],
-    severity: dict[str, str],
-    scan_id: int,
-    offset: int = 0,
-    days: int | None = None,
-) -> str:
+@dataclass
+class ScanContext:
+    """One scan's structure, severities and timeline, computed once per request.
+
+    The tree, the bars and the "show more" response all need the same five
+    things, and each of them is cheap enough to rebuild but expensive enough
+    that a single node expansion should not do it twice.
+    """
+
+    scan_id: int
+    days: int | None
+    nodes: list[dict]
+    children: dict[str, list[dict]]
+    severity: dict[str, str]
+    start: datetime
+    end: datetime
+    timelines: dict[str, list[dict]]
+
+    def roots(self) -> list[dict]:
+        """Tree roots, worst subtree first, then by derivation path."""
+        return sorted(
+            (node for node in self.nodes if node.get("parent_id") is None),
+            key=lambda n: (
+                -severity_rank(self.severity.get(str(n["id"]), "NONE")),
+                n["drv_path"],
+            ),
+        )
+
+    def node(self, drv_path: str) -> dict | None:
+        """Node by derivation path, or None when the scan has no such node."""
+        return next((node for node in self.nodes if node["drv_path"] == drv_path), None)
+
+    def ordered_children(self, node: dict) -> list[dict]:
+        """Children of `node`, worst subtree first."""
+        return _ordered_children(node, self.children, self.severity)
+
+
+def _scan_context(conn, scan_id: int, days: int | None) -> ScanContext | None:
+    """Fetch everything a page or a lazy fragment needs about one scan.
+
+    Args:
+        conn: Database connection.
+        scan_id: Scan whose dependency tree defines the structure.
+        days: Window length in days; None spans every scan of the target.
+
+    Returns:
+        ScanContext, or None when the scan has no tree.
+    """
+    nodes = database.get_dependency_tree_for_scan(conn, scan_id)
+    if not nodes:
+        return None
+    severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
+    since, start, end = timeseries.get_zoom_window(conn, scan_id, days)
+    return ScanContext(
+        scan_id=scan_id,
+        days=days,
+        nodes=nodes,
+        children=_children_map(nodes),
+        severity=severity,
+        start=start,
+        end=end,
+        timelines=timeseries.get_tree_subtree_timelines(conn, scan_id, since=since),
+    )
+
+
+def _drv_path(drv_path: str) -> str:
+    """Derivation path as it appears in an HTMX URL, which drops the leading slash.
+
+    Bottle consumes the separator slash between route segments, so the path
+    arrives without it and has to be restored before it is looked up.
+    """
+    return drv_path if drv_path.startswith("/") else "/" + drv_path
+
+
+def _render_node(ctx: ScanContext, node: dict, offset: int = 0) -> str:
     """Render one tree node, its empty timeline slot, and its children.
 
     Nodes with more than MAX_VISIBLE_CHILDREN children are truncated and
     get a "show more" button that loads the rest lazily.
 
     Args:
+        ctx: The scan the node belongs to.
         node: Tree node dict.
-        children_map: Parent id -> child nodes.
-        severity: Aggregated severity per node id.
-        scan_id: Scan the tree belongs to.
         offset: Number of children to skip (for the "show more" response).
-        days: Timeline window in days, carried into every lazy URL so the
-            bars a node loads are zoomed the same way as the ones already
-            drawn.
 
     Returns:
         HTML string for the node.
     """
     node_id = node_dom_id(node["drv_path"])
     drv_path = node["drv_path"]
-    window = f"?days={days}" if days else ""
-    query = f"days={days}&" if days else ""
-    sev = severity.get(str(node["id"]), "NONE")
-    children = _ordered_children(node, children_map, severity)
+    sev = ctx.severity.get(str(node["id"]), "NONE")
+    children = ctx.ordered_children(node)
     has_children = bool(children)
 
     html = f'<div class="tree-node" id="{node_id}">\n'
@@ -148,17 +209,18 @@ def _render_node(
     html += f'  <div class="node-timeline" id="{node_id}-timeline"></div>\n'
 
     if has_children:
+        url_path = drv_path.lstrip("/")
         html += f'  <div class="tree-children" id="{node_id}-children"\n'
-        html += f'    hx-get="/api/bars/{scan_id}/{drv_path}{window}"\n'
-        html += f'    hx-trigger="node-expanded"\n'
-        html += f'    hx-swap="none">\n'
+        html += f'    hx-get="{window_url(f"/api/bars/{ctx.scan_id}/{url_path}", ctx.days)}"\n'
+        html += '    hx-trigger="node-expanded"\n'
+        html += '    hx-swap="none">\n'
         for child in children[offset:offset + MAX_VISIBLE_CHILDREN]:
-            html += _render_node(child, children_map, severity, scan_id, days=days)
+            html += _render_node(ctx, child)
         remaining = len(children) - offset - MAX_VISIBLE_CHILDREN
         if remaining > 0:
             html += (
                 f'    <button class="show-more" '
-                f'hx-get="/api/children/{scan_id}/{drv_path}?{query}offset={offset + MAX_VISIBLE_CHILDREN}" '
+                f'hx-get="{window_url(f"/api/children/{ctx.scan_id}/{url_path}", ctx.days, offset=offset + MAX_VISIBLE_CHILDREN)}" '
                 f'hx-target="#{node_id}-children" hx-swap="beforeend" '
                 f'hx-trigger="click">show {remaining} more children</button>\n'
             )
@@ -168,7 +230,7 @@ def _render_node(
     return html
 
 
-def api_tree_endpoint(scan_id: int, days: int | None = None):
+def api_tree_endpoint(scan_id: int, days: int | None = None) -> str:
     """Get dependency tree as HTML for a scan.
 
     Args:
@@ -177,27 +239,16 @@ def api_tree_endpoint(scan_id: int, days: int | None = None):
             a newly expanded node is zoomed like the rest of the page.
     """
     with closing(_get_db()) as conn:
-        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
-        vuln_map = _vuln_map(conn, scan_id)
+        ctx = _scan_context(conn, scan_id, days)
 
-    if not nodes:
+    if ctx is None:
         return "<p>No tree data available for this scan.</p>"
 
-    children_map = _children_map(nodes)
-    severity = _subtree_severities(nodes, vuln_map)
-    window = f"?days={days}" if days else ""
-
-    root_nodes = [n for n in nodes if n.get("parent_id") is None]
-    result = ""
-    for root in sorted(
-        root_nodes,
-        key=lambda n: (-severity_rank(severity.get(str(n["id"]), "NONE")), n["drv_path"]),
-    ):
-        result += _render_node(root, children_map, severity, scan_id, days=days)
+    result = "".join(_render_node(ctx, root) for root in ctx.roots())
 
     # Fill the roots' and their children's bars once the tree is in the DOM
     result += (
-        f'<div id="bars-bootstrap" hx-get="/api/bars/{scan_id}{window}" '
+        f'<div id="bars-bootstrap" hx-get="{window_url(f"/api/bars/{scan_id}", days)}" '
         'hx-trigger="load" hx-swap="none"></div>'
     )
     return result
@@ -223,22 +274,15 @@ def api_vuln_map_endpoint(scan_id: int):
     return vuln_map
 
 
-def _bars_html(
-    nodes: list[dict],
-    timelines: dict[str, list[dict]],
-    start: datetime,
-    end: datetime,
-) -> str:
+def _bars_html(ctx: ScanContext, nodes: list[dict]) -> str:
     """Out-of-band HTML filling the timeline slot of each given node."""
-    html = ""
-    for node in nodes:
-        html += (
-            f'<div id="{node_dom_id(node["drv_path"])}-timeline" class="node-timeline" '
-            'hx-swap-oob="true">'
-            f'{mini_bar_html(timelines.get(node["drv_path"], []), start, end)}'
-            f"</div>"
-        )
-    return html
+    return "".join(
+        f'<div id="{node_dom_id(node["drv_path"])}-timeline" class="node-timeline" '
+        'hx-swap-oob="true">'
+        f'{mini_bar_html(ctx.timelines.get(node["drv_path"], []), ctx.start, ctx.end)}'
+        f"</div>"
+        for node in nodes
+    )
 
 
 def api_bars_endpoint(
@@ -260,28 +304,22 @@ def api_bars_endpoint(
         HTML string of out-of-band timeline divs.
     """
     with closing(_get_db()) as conn:
-        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
-        if not nodes:
-            return ""
-        children_map = _children_map(nodes)
-        severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        since, start, end = timeseries.get_zoom_window(conn, scan_id, days)
-        timelines = timeseries.get_tree_subtree_timelines(conn, scan_id, since=since)
+        ctx = _scan_context(conn, scan_id, days)
+
+    if ctx is None:
+        return ""
 
     if drv_path is None:
-        roots = [n for n in nodes if n.get("parent_id") is None]
-        targets = list(roots)
-        for root in roots:
-            targets.extend(_ordered_children(root, children_map, severity)[:MAX_VISIBLE_CHILDREN])
+        targets = ctx.roots()
+        for root in targets:
+            targets.extend(ctx.ordered_children(root)[:MAX_VISIBLE_CHILDREN])
     else:
-        if not drv_path.startswith("/"):
-            drv_path = "/" + drv_path
-        parent = next((n for n in nodes if n["drv_path"] == drv_path), None)
+        parent = ctx.node(_drv_path(drv_path))
         if parent is None:
             return ""
-        targets = _ordered_children(parent, children_map, severity)
+        targets = ctx.ordered_children(parent)
 
-    return _bars_html(targets, timelines, start, end)
+    return _bars_html(ctx, targets)
 
 
 def api_children_endpoint(
@@ -301,28 +339,18 @@ def api_children_endpoint(
     Returns:
         HTML string: the remaining tree nodes plus their timeline bars.
     """
-    if not drv_path.startswith("/"):
-        drv_path = "/" + drv_path
-
     with closing(_get_db()) as conn:
-        nodes = database.get_dependency_tree_for_scan(conn, scan_id)
-        if not nodes:
-            return ""
-        children_map = _children_map(nodes)
-        severity = _subtree_severities(nodes, _vuln_map(conn, scan_id))
-        since, start, end = timeseries.get_zoom_window(conn, scan_id, days)
-        timelines = timeseries.get_tree_subtree_timelines(conn, scan_id, since=since)
+        ctx = _scan_context(conn, scan_id, days)
 
-    parent = next((n for n in nodes if n["drv_path"] == drv_path), None)
+    if ctx is None:
+        return ""
+
+    parent = ctx.node(_drv_path(drv_path))
     if parent is None:
         return ""
 
-    hidden = _ordered_children(parent, children_map, severity)[offset:]
-    html = "".join(
-        _render_node(child, children_map, severity, scan_id, days=days)
-        for child in hidden
-    )
-    return html + _bars_html(hidden, timelines, start, end)
+    hidden = ctx.ordered_children(parent)[offset:]
+    return "".join(_render_node(ctx, child) for child in hidden) + _bars_html(ctx, hidden)
 
 
 def scan_detail_endpoint(scan_id: int, days: int | None = None):

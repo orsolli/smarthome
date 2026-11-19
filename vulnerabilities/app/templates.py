@@ -21,6 +21,23 @@ def node_dom_id(drv_path: str) -> str:
     return "node-" + re.sub(r"[^A-Za-z0-9_-]", "_", drv_path)
 
 
+def window_url(path: str, days: int | None = None, **params) -> str:
+    """URL for a page or a lazy HTMX request, carrying the zoom window.
+
+    Args:
+        path: Path without a query string.
+        days: Window length in days; None means the whole history, so no
+            parameter is written at all.
+        params: Further query parameters, in order.
+
+    Returns:
+        The URL, with `days=N` first when a window is in effect.
+    """
+    query = [("days", days)] if days else []
+    query.extend(params.items())
+    return f"{path}?{'&'.join(f'{key}={value}' for key, value in query)}" if query else path
+
+
 def _severity_css() -> str:
     """CSS rules for the severity dots, derived from the color table."""
     return "\n        ".join(
@@ -147,8 +164,9 @@ def sidebar_html(
     html += "</div>\n"
 
     if scan:
+        scan_id = scan["id"]
         generation = scan.get("scanned_path") or scan["target"]
-        html += f"<h2>Scan {scan['id']}</h2>\n"
+        html += f"<h2>Scan {scan_id}</h2>\n"
         html += (
             f'<div class="gen-info">\n'
             f'  <code>{scan["target"]}</code> as of {_short_date(scan["timestamp"])}\n'
@@ -158,8 +176,7 @@ def sidebar_html(
         )
         for length, label in WINDOW_CHOICES:
             active = " active" if length == days else ""
-            query = "" if length is None else f"?days={length}"
-            html += f'  <a class="chip{active}" href="/scan/{scan["id"]}{query}">{label}</a>\n'
+            html += f'  <a class="chip{active}" href="{window_url(f"/scan/{scan_id}", length)}">{label}</a>\n'
         html += "</div>\n"
 
     html += """<h2>Severity Legend</h2>
@@ -191,10 +208,9 @@ def tree_html(scan_id: int, days: int | None = None) -> str:
     Returns:
         HTML string for the tree (to be wrapped by base_html).
     """
-    window = f"?days={days}" if days else ""
     return f"""<h2>Dependency Tree</h2>
 <div id="tree-root"
-     hx-get="/api/tree/{scan_id}{window}"
+     hx-get="{window_url(f'/api/tree/{scan_id}', days)}"
      hx-trigger="load"
      hx-swap="innerHTML"
      hx-target="this">
