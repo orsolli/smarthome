@@ -21,14 +21,8 @@ from core import database, timeseries
 
 
 def _get_db():
-    """Get database connection from app context."""
-    import os
-    from pathlib import Path
-    db_path = os.environ.get(
-        "DATABASE_PATH",
-        str(Path.home() / ".local" / "share" / "vulnerabilities" / "vulnerabilities.db"),
-    )
-    return database.init_db(db_path)
+    """A connection to the database this app is configured to use."""
+    return database.init_db()
 
 
 def index_endpoint():
@@ -254,24 +248,19 @@ def api_tree_endpoint(scan_id: int, days: int | None = None) -> str:
     return result
 
 
-def api_vuln_map_endpoint(scan_id: int):
-    """Get vulnerability map as JSON for a scan."""
+def api_vuln_map_endpoint(scan_id: int) -> dict[str, dict[str, str]]:
+    """Get vulnerability map as JSON for a scan: drv_path -> package and severity."""
     with closing(_get_db()) as conn:
-        cursor = conn.execute(
-            "SELECT package_name, drv_path, severity FROM vulnerability_events WHERE scan_id = ?",
-            (scan_id,),
-        )
-        rows = cursor.fetchall()
-        columns = [desc[0] for desc in cursor.description]
-        events = [dict(zip(columns, row)) for row in rows]
-
-    vuln_map: dict[str, dict] = {}
-    for event in events:
-        vuln_map[event["drv_path"]] = {
-            "package_name": event["package_name"],
-            "severity": event["severity"],
+        return {
+            row["drv_path"]: {
+                "package_name": row["package_name"],
+                "severity": row["severity"],
+            }
+            for row in conn.execute(
+                "SELECT drv_path, package_name, severity FROM vulnerability_events WHERE scan_id = ?",
+                (scan_id,),
+            )
         }
-    return vuln_map
 
 
 def _bars_html(ctx: ScanContext, nodes: list[dict]) -> str:
@@ -361,22 +350,20 @@ def scan_detail_endpoint(scan_id: int, days: int | None = None):
         days: Optional window length in days, from ?days= on the URL.
     """
     with closing(_get_db()) as conn:
-        cursor = conn.execute(
+        scan = conn.execute(
             "SELECT id, timestamp, target, scanned_path FROM scans WHERE id = ?",
             (scan_id,),
-        )
-        row = cursor.fetchone()
-        columns = [desc[0] for desc in cursor.description]
+        ).fetchone()
         targets = database.list_targets(conn)
 
-    if not row:
+    if not scan:
         return base_html(
             "Scan not found",
             sidebar_html(targets),
             "<h1>Scan not found</h1>",
         )
 
-    scan = dict(zip(columns, row))
+    scan = dict(scan)
     return base_html(
         f"Scan {scan['id']}: {scan['target']}",
         sidebar_html(targets, scan, days),

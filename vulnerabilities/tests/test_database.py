@@ -218,7 +218,8 @@ class TestNodeIdentity(unittest.TestCase):
             "SELECT target, scanned_path FROM scans WHERE id = ?", (scan_id,)
         ).fetchone()
         self.assertEqual(
-            row, ("/run/current-system", "/nix/var/nix/profiles/system-3-link")
+            (row["target"], row["scanned_path"]),
+            ("/run/current-system", "/nix/var/nix/profiles/system-3-link"),
         )
 
     def test_scanned_path_defaults_to_the_target(self):

@@ -61,9 +61,7 @@ def get_timeseries_for_package(
     base += " ORDER BY s.timestamp"
 
     cursor = conn.execute(base, params)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def get_timeseries_for_all_packages(
@@ -100,9 +98,7 @@ def get_timeseries_for_all_packages(
     base += " ORDER BY s.timestamp, v.package_name"
 
     cursor = conn.execute(base, params)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def _nodes_of_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any]]:
@@ -112,9 +108,7 @@ def _nodes_of_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any
            FROM dependency_tree WHERE scan_id = ?""",
         (scan_id,),
     )
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def subtree_severities(

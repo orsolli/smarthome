@@ -11,8 +11,10 @@ with every rebuild, so it is only unique inside a single scan; the `target` of a
 scan is what groups scans of the same machine or build together.
 """
 
+import os
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from core.identity import compressed_lineages, version_from_drv
@@ -78,19 +80,39 @@ def _migrate(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def init_db(db_path: str) -> sqlite3.Connection:
+def default_db_path() -> str:
+    """Where the database lives: DATABASE_PATH, or the user's data directory.
+
+    Returns:
+        Path to the SQLite file.
+    """
+    return os.environ.get(
+        "DATABASE_PATH",
+        str(
+            Path.home()
+            / ".local"
+            / "share"
+            / "vulnerabilities"
+            / "vulnerabilities.db"
+        ),
+    )
+
+
+def init_db(db_path: str | None = None) -> sqlite3.Connection:
     """Initialize the database and return a connection.
 
     Existing databases are migrated in place: the version and lineage columns
     are added when absent.
 
     Args:
-        db_path: Path to the SQLite database file.
+        db_path: Path to the SQLite file; defaults to default_db_path().
 
     Returns:
-        A sqlite3.Connection with schema initialized.
+        A sqlite3.Connection with schema initialized. Rows are sqlite3.Row,
+        so a query result can be read by column name as well as by position.
     """
-    conn = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path or default_db_path())
+    conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA_SQL)
     _migrate(conn)
     conn.commit()
@@ -360,9 +382,7 @@ def get_scans_for_target(
         query += " AND timestamp >= ?"
         params.append(since)
     cursor = conn.execute(query + " ORDER BY timestamp", params)
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def list_targets(conn: sqlite3.Connection) -> list[dict[str, Any]]:
@@ -393,8 +413,7 @@ def list_targets(conn: sqlite3.Connection) -> list[dict[str, Any]]:
            GROUP BY target
            ORDER BY last_scan DESC"""
     )
-    columns = [desc[0] for desc in cursor.description]
-    targets = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    targets = [dict(row) for row in cursor.fetchall()]
 
     for target in targets:
         severities = [
@@ -443,9 +462,7 @@ def get_vulnerabilities_since(
             (since,),
         )
 
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]
 
 
 def get_dependency_tree_for_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any]]:
@@ -465,6 +482,4 @@ def get_dependency_tree_for_scan(conn: sqlite3.Connection, scan_id: int) -> list
            WHERE scan_id = ?""",
         (scan_id,),
     )
-    rows = cursor.fetchall()
-    columns = [desc[0] for desc in cursor.description]
-    return [dict(zip(columns, row)) for row in rows]
+    return [dict(row) for row in cursor.fetchall()]

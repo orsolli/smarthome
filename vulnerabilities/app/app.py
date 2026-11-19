@@ -6,6 +6,7 @@ to run scans and serve results via a Bottle web server.
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -38,18 +39,7 @@ def _json_response(data) -> str:
     return json.dumps(data)
 
 # Default database path (writable location)
-import os
-
-DB_PATH = os.environ.get(
-    "DATABASE_PATH",
-    str(
-        Path.home()
-        / ".local"
-        / "share"
-        / "vulnerabilities"
-        / "vulnerabilities.db"
-    ),
-)
+DB_PATH = database.default_db_path()
 _DB_DIR = Path(DB_PATH).parent
 _DB_DIR.mkdir(parents=True, exist_ok=True)
 
