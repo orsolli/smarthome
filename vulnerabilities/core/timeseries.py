@@ -111,11 +111,31 @@ def _nodes_of_scan(conn: sqlite3.Connection, scan_id: int) -> list[dict[str, Any
     return [dict(row) for row in cursor.fetchall()]
 
 
-def subtree_severities(
+def _label(node: dict[str, Any]) -> str:
+    """Readable "name version" for a node, with the version optional."""
+    version = node.get("version") or ""
+    name = node.get("package_name", "")
+    return f"{name} {version}".strip()
+
+
+def subtree_worst(
     nodes: list[dict[str, Any]],
     event_severity: dict[str, str],
-) -> dict[int, str]:
-    """Aggregated severity per node: a node is as red as its worst descendant."""
+) -> dict[int, tuple[str, str]]:
+    """Aggregated severity per node, and the descendant that drives it.
+
+    A node is as red as its worst descendant. The second element of the pair is
+    the "name version" of the nearest node in that subtree whose own event has
+    the aggregated severity, or "" when the node's own event is the driver. A
+    clean node gets ("NONE", "").
+
+    Args:
+        nodes: Nodes of one scan's dependency tree.
+        event_severity: drv_path -> severity of that node's own event.
+
+    Returns:
+        Dict mapping node id -> (aggregated severity, driving descendant label).
+    """
     ids = {node["id"] for node in nodes}
     children: dict[int, list[dict[str, Any]]] = {}
     for node in nodes:
@@ -123,28 +143,30 @@ def subtree_severities(
         if parent is not None and parent in ids:
             children.setdefault(parent, []).append(node)
 
-    severity: dict[int, str] = {}
+    worst: dict[int, tuple[str, str]] = {}
     for root in nodes:
-        if root["id"] in severity:
+        if root["id"] in worst:
             continue
         stack: list[tuple[dict[str, Any], bool]] = [(root, False)]
         while stack:
             node, expanded = stack.pop()
-            if node["id"] in severity:
+            if node["id"] in worst:
                 continue
             if not expanded:
                 stack.append((node, True))
                 for child in children.get(node["id"], []):
-                    if child["id"] not in severity:
+                    if child["id"] not in worst:
                         stack.append((child, False))
                 continue
-            worst = event_severity.get(node.get("drv_path", ""), "NONE")
+            severity = event_severity.get(node.get("drv_path", ""), "NONE")
+            driver = ""
             for child in children.get(node["id"], []):
-                child_severity = severity.get(child["id"], "NONE")
-                if severity_rank(child_severity) > severity_rank(worst):
-                    worst = child_severity
-            severity[node["id"]] = worst
-    return severity
+                child_severity, child_driver = worst.get(child["id"], ("NONE", ""))
+                if severity_rank(child_severity) > severity_rank(severity):
+                    severity = child_severity
+                    driver = child_driver or _label(child)
+            worst[node["id"]] = (severity, driver)
+    return worst
 
 
 def _common_prefix_len(left: str, right: str) -> int:
@@ -240,7 +262,10 @@ def get_tree_subtree_timelines(
 
     Returns:
         Dict mapping drv_path -> list of dicts with keys:
-        scan_id, timestamp, severity, version, ordered by timestamp. A scan
+        scan_id, timestamp, severity, name, version, source, ordered by
+        timestamp. `name` is the node's own package name, `version` the version
+        its counterpart had in that scan, and `source` the descendant driving
+        that scan's severity, or "" when the node itself is the cause. A scan
         where the node existed but was clean appears with severity NONE, which
         is what makes a fixed vulnerability end the bar.
     """
@@ -273,7 +298,7 @@ def get_tree_subtree_timelines(
         scan_data[other_id] = {
             "timestamp": timestamp,
             "index": _scan_index(other_nodes),
-            "severity": subtree_severities(other_nodes, severities),
+            "worst": subtree_worst(other_nodes, severities),
         }
 
     own_name_counts: dict[str, int] = {}
@@ -290,11 +315,14 @@ def get_tree_subtree_timelines(
             counterpart = _find_counterpart(node, data["index"], own_name_counts[node["package_name"]])
             if counterpart is None:
                 continue
+            severity, driver = data["worst"].get(counterpart["id"], ("NONE", ""))
             entries.append({
                 "scan_id": other_id,
                 "timestamp": data["timestamp"],
-                "severity": data["severity"].get(counterpart["id"], "NONE"),
+                "severity": severity,
                 "version": counterpart.get("version") or "",
+                "name": node["package_name"],
+                "source": driver,
             })
         timelines[node["drv_path"]] = entries
 

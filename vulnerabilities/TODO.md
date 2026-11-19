@@ -259,26 +259,35 @@ pkgs.python3Packages.buildPythonApplication {
 - [x] Nodes that are clean in a scan emit an explicit `NONE` event, so a fixed vulnerability ends the bar.
 - [x] `package_name` is the base pname and everything after the first dash followed by a digit is the version (`...-webkitgtk-9.99.0+abi=1.0.drv` → `webkitgtk` / `9.99.0+abi=1.0`). The old greedy split left the version inside the name whenever it contained a character outside `[0-9a-z]`, so every ABI or revision rebuild of `webkitgtk`, `glibc`, `go` or `texlive.infra` looked like a new package and its bar restarted.
 
-**Open gaps**
+**Resolved**
 
-1. [ ] **The generation actually scanned is not recorded.** `scans.target` is `/run/current-system` while `scans.scanned_path` would be `/nix/var/nix/profiles/system-3-link`. Without it, "which scan is which generation" is only guessable from the timestamp.
-2. [ ] **The window is global.** `get_scan_window()` takes MIN/MAX over *all* scans, so a `/run/current-system` bar stretches across the unrelated `~/.dotfiles/result-example` scan.
-3. [ ] **`/` lists scans, not identities.** Eighteen generations of one laptop is 18 near-identical rows; the unit of interest is the target.
-4. [ ] **No zoom.** The oldest scan is six months back, and the interesting signal is the last few weeks.
-5. [ ] **Tooltip semantics are mixed.** The bar colour is the *subtree* maximum (`subtree_severities`), but the version in the tooltip is the node's own version — `pipewire` was HIGH on 2024-11-16 yet its bar stays CRITICAL because `libcanberra` under it is critical. Either label the bar as an aggregate or put the driving child's name in the tooltip.
+1. [x] **The generation actually scanned was not recorded.** `scans.target` is `/run/current-system` while `scans.scanned_path` is the generation link handed to `vulnix` (`/nix/var/nix/profiles/system-3-link`), and the scan page shows it.
+2. [x] **The window was global.** `get_zoom_window(conn, scan_id, days)` takes MIN/MAX over the scans of *that scan's target*, so a `/run/current-system` bar never stretches across the unrelated `~/.dotfiles/result-example` scan.
+3. [x] **`/` listed scans, not identities.** It now lists targets (`list_targets`): one row per machine, with its scan count, first/last scan and worst severity; `/scan/<id>` is the generation view.
+4. [x] **No zoom.** The sidebar has `7d / 30d / 90d / all` chips; `?days=N` narrows the timeline and re-requests the bars.
+5. [x] **Tooltip semantics were mixed.** The bar colour is still the *subtree* maximum, but the tooltip now says whose severity it is:
+
+    ```
+    CRITICAL from 2024-11-16T14:03:16 to 2024-11-17T19:16:29
+    pipewire 9.99.0
+    via go 1.0.0-linux-386-bootstrap
+    ```
+
+    `subtree_worst` returns `(severity, driving descendant)`, so the cause travels with every timeline entry.
 
 **Schema (`core/database.py`)**
 - `scans.scanned_path` (TEXT, nullable): the path handed to `vulnix`. Add with a guarded `ALTER TABLE` so existing databases upgrade in place.
 
 **Queries (`core/timeseries.py`)**
-- `get_scan_window(conn, target, since=None)` → `(start, end)` over the target's scans only, optionally cut at `since`.
-- `get_tree_subtree_timelines(conn, scan_id, since=None)` and `subtree_severities` take the same window.
+- `get_zoom_window(conn, scan_id, days)` → `(since, start, end)` over the target's scans only, padded by `pad_days`.
+- `get_tree_subtree_timelines(conn, scan_id, since=None)` and `subtree_worst` take the same window.
 - `list_targets(conn)` → `target, scan_count, first_scan, last_scan, latest_scan_id, worst_severity`.
 
 **Frontend (`app/api.py`, `app/chart.py`)**
-- [ ] `/` renders the target list; `/scan/<id>` stays the generation view, reached from it, with a header naming the target, the generation link and the date.
-- [ ] `?days=30` (or `?since=`) on the tree page; chips `all / 90 / 30 / 7` that re-request the bars with the narrower window.
-- [ ] A node first seen inside the window keeps its leading `NONE` segment; scans outside the window are not bar boundaries.
+- [x] `/` renders the target list; `/scan/<id>` stays the generation view, reached from it, with a header naming the target, the generation link and the date.
+- [x] `?days=30` (or `?since=`) on the tree page; chips `all / 90 / 30 / 7` that re-request the bars with the narrower window.
+- [x] A node first seen inside the window keeps its leading `NONE` segment; scans outside the window are not bar boundaries.
+- [x] Bars are only generated for nodes that are rendered: the bootstrap fills the roots and the first `MAX_VISIBLE_CHILDREN` children of each root, and deeper bars arrive on expansion.
 
 **Tests (TDD order)**
 1. Fixture DB with two targets and a scan outside the window; assert the window excludes the other target's scan.

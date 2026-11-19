@@ -82,13 +82,33 @@ class TestBuildSegments(unittest.TestCase):
         self.assertEqual([sev for sev, *_ in segments], ["CRITICAL", "NONE"])
         self.assertEqual(segments[0][2], START)
 
-    def test_the_version_travels_with_the_event(self):
+    def test_the_node_label_travels_with_the_event(self):
         timeline = [
-            {"timestamp": "2024-06-15T10:00:00", "severity": "HIGH", "version": "2.54.1"},
+            {
+                "timestamp": "2024-06-15T10:00:00",
+                "severity": "HIGH",
+                "name": "webkitgtk",
+                "version": "2.54.1",
+            },
         ]
         segments = _build_segments(timeline, START, END)
         self.assertEqual(segments[0][4], "")
-        self.assertEqual(segments[1][4], "2.54.1")
+        self.assertEqual(segments[1][4], "webkitgtk 2.54.1")
+        self.assertEqual(segments[1][5], "")
+
+    def test_the_driving_child_travels_with_the_event(self):
+        """A bar coloured by a grandchild carries that grandchild's label."""
+        timeline = [
+            {
+                "timestamp": "2024-06-15T10:00:00",
+                "severity": "CRITICAL",
+                "name": "pipewire",
+                "version": "1.4.2",
+                "source": "libcanberra 0.28.3",
+            },
+        ]
+        segments = _build_segments(timeline, START, END)
+        self.assertEqual(segments[1][5], "libcanberra 0.28.3")
 
     def test_unsorted_input_is_sorted(self):
         timeline = [
@@ -131,19 +151,56 @@ class TestMiniBarHtml(unittest.TestCase):
         )
         self.assertNotIn("chart-bar-label", html)
 
-    def test_the_version_shows_up_in_the_tooltip(self):
+    def test_the_tooltip_names_the_node_and_its_cause(self):
         html = mini_bar_html(
             [
                 {
                     "timestamp": "2024-06-15T10:00:00",
-                    "severity": "HIGH",
-                    "version": "2.54.2+abi=4.1",
+                    "severity": "CRITICAL",
+                    "name": "pipewire",
+                    "version": "1.4.2",
+                    "source": "libcanberra 0.28.3",
                 }
             ],
             START,
             END,
         )
-        self.assertIn("HIGH from 2024-06-15T10:00:00 to 2024-12-31T00:00:00 (2.54.2+abi=4.1)", html)
+        self.assertIn(
+            "CRITICAL from 2024-06-15T10:00:00 to 2024-12-31T00:00:00", html
+        )
+        self.assertIn("pipewire 1.4.2", html)
+        self.assertIn("via libcanberra 0.28.3", html)
+
+    def test_a_node_coloured_by_itself_has_no_cause_line(self):
+        html = mini_bar_html(
+            [
+                {
+                    "timestamp": "2024-06-15T10:00:00",
+                    "severity": "HIGH",
+                    "name": "pipewire",
+                    "version": "1.4.2",
+                    "source": "",
+                }
+            ],
+            START,
+            END,
+        )
+        self.assertNotIn("via ", html)
+
+    def test_the_tooltip_is_escape_safe(self):
+        html = mini_bar_html(
+            [
+                {
+                    "timestamp": "2024-06-15T10:00:00",
+                    "severity": "HIGH",
+                    "name": 'we"ird',
+                    "version": "1.0",
+                }
+            ],
+            START,
+            END,
+        )
+        self.assertIn("&quot;", html)
 
 
 if __name__ == "__main__":

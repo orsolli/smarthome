@@ -77,8 +77,10 @@ def _subtree_severities(
     vuln_map: dict[str, str],
 ) -> dict[str, str]:
     """Aggregated severity per node: a node is as red as its worst descendant."""
-    severities = timeseries.subtree_severities(nodes, vuln_map)
-    return {str(node_id): severity for node_id, severity in severities.items()}
+    return {
+        str(node_id): severity
+        for node_id, (severity, _) in timeseries.subtree_worst(nodes, vuln_map).items()
+    }
 
 
 def _ordered_children(

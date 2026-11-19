@@ -234,6 +234,36 @@ class TestSubtreeTimeseries(unittest.TestCase):
         self.assertEqual(versions[self.scan1], "9.99.0")
         self.assertEqual(versions[self.scan2], "1.0.3")
 
+    def test_a_bar_names_the_descendant_driving_it(self):
+        """The root is coloured by its worst descendant, and says which one."""
+        data = self._timeline(self.system_drv)
+        self.assertEqual(data[0]["source"], "ShellCheck 9.99.0")
+        self.assertEqual(data[1]["source"], "Diff 1.0.3")
+
+    def test_a_node_driven_by_itself_has_no_source(self):
+        data = self._timeline(self.diff1_drv)
+        self.assertEqual(data[0]["source"], "")
+        self.assertEqual(data[1]["source"], "")
+
+    def test_a_clean_node_has_no_source(self):
+        data = self._timeline(self.gzip_drv)
+        self.assertEqual([row["source"] for row in data], ["", ""])
+
+    def test_the_label_names_the_node_being_viewed(self):
+        """A bar belongs to the node in the scan being rendered, so its name
+        comes from that tree even when an older generation built it from a
+        different flake and gave it a different name."""
+        scan3 = database.insert_scan(self.conn, "./result")
+        database.insert_dependency_node(
+            self.conn, scan3, "nixos-system-renamed",
+            f"/nix/store/{self.HASH}-nixos-system-old.drv", lineage="./result",
+        )
+        self.conn.commit()
+
+        data = self._timeline(self.system_drv)
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[-1]["name"], "nixos-system")
+
     def test_unknown_drv_path(self):
         """A drv path not in the tree yields an empty timeline."""
         data = self._timeline("/nix/store/unknown.drv")

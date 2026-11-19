@@ -6,6 +6,7 @@ found anywhere in that node's subtree during that stretch.
 """
 
 from datetime import datetime
+from html import escape as html_escape
 
 from core.severity import SEVERITY_INTENSITY, severity_rgba
 
@@ -25,24 +26,30 @@ def _parse_timestamp(ts: str) -> datetime:
         return datetime.min
 
 
+def _entry_label(event: dict) -> str:
+    """The node's own "name version", for the tooltip."""
+    return f"{event.get('name', '')} {event.get('version', '')}".strip()
+
+
 def _build_segments(
     timeline: list[dict],
     start_time: datetime,
     end_time: datetime,
-) -> list[tuple[str, float, datetime, datetime, str]]:
-    """Turn scan events into (severity, width_percent, start, end, version) segments.
+) -> list[tuple[str, float, datetime, datetime, str, str]]:
+    """Turn scan events into (severity, width, start, end, own label, cause) segments.
 
     The severity recorded at a scan persists until the next scan changes
     it, so a bar always covers the whole [start_time, end_time] window.
     Zero-width segments (two scans at the same timestamp) are skipped.
 
     Args:
-        timeline: List of dicts with keys: timestamp, severity, version.
+        timeline: List of dicts with keys: timestamp, severity, version, source.
         start_time: Chart start time.
         end_time: Chart end time.
 
     Returns:
-        List of (severity, width_percent, segment_start, segment_end, version).
+        List of (severity, width_percent, segment_start, segment_end,
+        own "name version", descendant driving the severity).
     """
     total_seconds = (end_time - start_time).total_seconds()
     if total_seconds <= 0:
@@ -50,45 +57,54 @@ def _build_segments(
 
     timeline = sorted(timeline, key=lambda x: _parse_timestamp(x.get("timestamp", "")))
 
-    segments: list[tuple[str, float, datetime, datetime, str]] = []
+    segments: list[tuple[str, float, datetime, datetime, str, str]] = []
     prev_time = start_time
     prev_sev = "NONE"
-    prev_version = ""
+    prev_label = ""
+    prev_source = ""
     for event in timeline:
-        sev = event.get("severity", "NONE")
-        version = event.get("version", "")
         event_time = _parse_timestamp(event.get("timestamp", ""))
         event_time = max(start_time, min(event_time, end_time))
 
         if event_time > prev_time:
             width = (event_time - prev_time).total_seconds() / total_seconds * 100
-            segments.append((prev_sev, width, prev_time, event_time, prev_version))
+            segments.append(
+                (prev_sev, width, prev_time, event_time, prev_label, prev_source)
+            )
 
         prev_time = event_time
-        prev_sev = sev
-        prev_version = version
+        prev_sev = event.get("severity", "NONE")
+        prev_label = _entry_label(event)
+        prev_source = event.get("source", "")
 
     if prev_time < end_time:
         width = (end_time - prev_time).total_seconds() / total_seconds * 100
-        segments.append((prev_sev, width, prev_time, end_time, prev_version))
+        segments.append((prev_sev, width, prev_time, end_time, prev_label, prev_source))
 
     return segments
 
 
 def _segments_html(
-    segments: list[tuple[str, float, datetime, datetime, str]]
+    segments: list[tuple[str, float, datetime, datetime, str, str]]
 ) -> str:
-    """Render timeline segments as span elements."""
+    """Render timeline segments as span elements.
+
+    The bar colour is the subtree maximum, so the tooltip says whose severity it
+    is: the node's own version, plus the descendant driving it when a child is
+    the reason the bar is red.
+    """
     html = ""
-    for sev, width, seg_start, seg_end, version in segments:
+    for sev, width, seg_start, seg_end, label, source in segments:
         color = severity_rgba(sev, SEVERITY_INTENSITY.get(sev, 1.0))
         title = f"{sev} from {seg_start.isoformat()} to {seg_end.isoformat()}"
-        if version:
-            title += f" ({version})"
+        if label:
+            title += f"\n{label}"
+        if source:
+            title += f"\nvia {source}"
         html += (
             f'<span class="chart-bar-segment" '
             f'style="width:{width:.2f}%;background:{color};" '
-            f'title="{title}"></span>'
+            f'title="{html_escape(title)}"></span>'
         )
     return html
 
@@ -101,7 +117,8 @@ def mini_bar_html(
     """Render a compact, label-free timeline track for a tree node.
 
     Args:
-        timeline: List of dicts with keys: timestamp, severity.
+        timeline: List of dicts with keys: timestamp, severity, name, version,
+            source (the descendant driving that scan's severity, or "").
         start_time: Chart start time (shared window for all nodes).
         end_time: Chart end time.
 
