@@ -11,6 +11,7 @@ in
     ./timeseries_plot
     ./read_han
     ./storage
+    ./vulnerabilities
   ];
 
   options = {

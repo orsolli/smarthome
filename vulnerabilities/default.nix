@@ -10,7 +10,7 @@ in
     services.smarthome.vulnerabilities = {
       enable = mkOption {
         type = types.bool;
-        default = cfg.enable;
+        default = false;
         description = "Enable the vulnerability scanner service.";
       };
 
