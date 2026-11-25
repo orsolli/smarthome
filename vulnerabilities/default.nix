@@ -4,6 +4,7 @@ with lib;
 
 let
   cfg = config.services.smarthome;
+  scanner = pkgs.callPackage ./vulnerabilities.nix { };
 in
 {
   options = {
@@ -35,13 +36,32 @@ in
       wantedBy = [ "multi-user.target" ];
 
       serviceConfig = {
-        ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-web";
+        ExecStart = "${scanner}/bin/vuln-web";
         User = "smarthome";
         Group = "smarthome";
-        Environment = {
-          DATABASE_PATH = cfg.vulnerabilities.databasePath;
-          BIND_ADDRESS = cfg.vulnerabilities.bindAddress;
-        };
+      };
+
+      environment = {
+        DATABASE_PATH = cfg.vulnerabilities.databasePath;
+        BIND_ADDRESS = cfg.vulnerabilities.bindAddress;
+      };
+    };
+
+    # The scan is a service: a timer only schedules it, it has no
+    # serviceConfig of its own.
+    systemd.services.vulnerability-scan = {
+      description = "Vulnerability Scanner";
+      after = [ "network.target" "systemd-tmpfiles-setup.service" ];
+
+      serviceConfig = {
+        ExecStart = "${scanner}/bin/vuln-scanner";
+        User = "smarthome";
+        Group = "smarthome";
+      };
+
+      environment = {
+        DATABASE_PATH = cfg.vulnerabilities.databasePath;
+        VULNIX_PATH = "${pkgs.vulnix}/bin/vulnix";
       };
     };
 
@@ -49,17 +69,8 @@ in
       description = "Vulnerability Scanner Timer";
       wantedBy = [ "timers.target" ];
 
-      serviceConfig = {
-        ExecStart = "${pkgs.callPackage ./vulnerabilities.nix {}}/bin/vuln-scanner";
-        User = "smarthome";
-        Group = "smarthome";
-        Environment = {
-          DATABASE_PATH = cfg.vulnerabilities.databasePath;
-          VULNIX_PATH = pkgs.vulnix;
-        };
-      };
-
       timerConfig = {
+        Unit = "vulnerability-scan.service";
         OnBootSec = "5min";
         OnUnitActiveSec = "1h";
       };
