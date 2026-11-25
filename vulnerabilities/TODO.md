@@ -295,17 +295,19 @@ pkgs.python3Packages.buildPythonApplication {
 3. Assert `scanned_path` survives insert and is shown on the scan page.
 4. Assert `?days=7` on a backfilled DB drops the segments before the cutoff but keeps the count of segments equal to the in-window scans.
 
-**Backfill recipe** (one generation per row, quoted — `${pair##*:}` on `3:2024-11-01T15:48:40` yields `40`, which is how five scans ended up dated 1970)
+**Backfill recipe** — `scripts/backfill.sh` does this; the trap to avoid is deriving
+the timestamp from the wrong field: `${pair##*:}` on `3:2024-11-01T15:48:40` yields
+`40`, which is how five scans ended up dated 1970.
 
 ```bash
-for g in 1 2 3 4 5; do
-  link=/nix/var/nix/profiles/system-$g-link
-  ts=$(date -d "@$(stat -c %Y "$link")" +%Y-%m-%dT%H:%M:%S)   # stat on a symlink does not follow it
-  DATABASE_PATH=$DB VULNIX_PATH=/run/current-system/sw/bin/vulnix \
-    nix-shell -p python3 python3Packages.bottle \
-    --command "python -m app scan --target '$link' --as-target /run/current-system --at '$ts'"
-done
+nix-shell -p python3 python3Packages.bottle \
+  --command "scripts/backfill.sh --gens 1 2 3 4 5 --db $DB"
+scripts/backfill.sh --dry-run       # print the commands, scan nothing
 ```
+
+Each generation is scanned through its profile link and dated with that link's own
+mtime (`stat -c %Y` on a symlink does not follow it), recorded under `--as-target`
+so all generations of one machine share a timeline.
 
 **Verification checklist**
 - Coverage query: `len(t) > 1` for most nodes in `get_tree_subtree_timelines(conn, scan_id)`.
