@@ -1,0 +1,144 @@
+"""Tests for merger module."""
+
+import os
+import tempfile
+import unittest
+
+from core.merger import TreeMergerImpl, _dict_to_text, _trees_to_text
+
+
+class TestDictToText(unittest.TestCase):
+    def test_simple_node(self):
+        """A single node with no children produces one line."""
+        node = {"drv_path": "/nix/store/abc.drv", "pname": "test-pkg"}
+        result = _dict_to_text(node)
+        self.assertIn("test-pkg", result)
+        self.assertIn("/nix/store/abc.drv", result)
+
+    def test_node_with_children(self):
+        """A node with children produces indented child lines."""
+        node = {
+            "drv_path": "/nix/store/parent.drv",
+            "pname": "parent",
+            "children": [
+                {"drv_path": "/nix/store/child.drv", "pname": "child"}
+            ],
+        }
+        result = _dict_to_text(node)
+        lines = result.split("\n")
+        self.assertEqual(len(lines), 2)
+        self.assertIn("parent", lines[0])
+        self.assertIn("child", lines[1])
+
+
+class TestTreesToText(unittest.TestCase):
+    def test_empty_list(self):
+        """An empty list returns empty string."""
+        result = _trees_to_text([])
+        self.assertEqual(result, "")
+
+    def test_single_tree(self):
+        """A single tree is converted to text."""
+        trees = [{"drv_path": "/nix/store/a.drv", "pname": "a"}]
+        result = _trees_to_text(trees)
+        self.assertIn("a", result)
+
+    def test_multiple_trees(self):
+        """Multiple trees are separated by newlines."""
+        trees = [
+            {"drv_path": "/nix/store/a.drv", "pname": "a"},
+            {"drv_path": "/nix/store/b.drv", "pname": "b"},
+        ]
+        result = _trees_to_text(trees)
+        self.assertIn("a", result)
+        self.assertIn("b", result)
+
+
+class TestMergeDependencyTrees(unittest.TestCase):
+    def test_merger_single_tree(self):
+        from core.merger import TreeMergerImpl
+        merger = TreeMergerImpl()
+        trees = [{'name': 'a', 'children': []}]
+        result = merger.merge_trees(trees)
+        self.assertEqual(result['name'], 'a')
+        self.assertEqual(len(result['children']), 0)
+
+    def test_merger_multiple_trees_overlap(self):
+        from core.merger import TreeMergerImpl
+        merger = TreeMergerImpl()
+        tree1 = {'name': 'a', 'children': [{'name': 'b', 'children': []}]}
+        tree2 = {'name': 'a', 'children': [{'name': 'c-d', 'children': []}]}
+        result = merger.merge_trees([tree1, tree2])
+        
+        # Root is '.', so first child should be '/nix/store/a'
+        root = result
+        self.assertEqual(root['name'], 'a')
+        
+        # Check if both children 'b' and 'c' exist under 'a'
+        child_names = [child['name'] for child in root['children']]
+        self.assertIn('b', child_names)
+        self.assertIn('c-d', child_names)
+
+    def test_empty_input(self):
+        """Empty input returns empty dict."""
+        result = TreeMergerImpl().merge_trees([])
+        self.assertEqual(result, None)
+
+    def test_single_tree(self):
+        """A single tree is returned (possibly modified by tree_parser)."""
+        trees = [
+            {
+                "drv_path": "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv",
+                "name": "nixos-system-example-24.11",
+                "pname": "nixos-system-example",
+                "children": [
+                    {
+                        "drv_path": "/nix/store/diffdrv0000000000000000000000000000-Diff-9.99.0.drv",
+                        "name": "Diff-9.99.0",
+                        "pname": "Diff",
+                        "children": [],
+                    }
+                ],
+            }
+        ]
+        result = TreeMergerImpl().merge_trees(trees)
+        self.assertIsInstance(result, dict)
+
+    def test_multiple_trees(self):
+        """Multiple trees are merged."""
+        trees = [
+            {
+                "drv_path": "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv",
+                "name": "nixos-system-example-24.11",
+                "pname": "nixos-system-example",
+                "children": [
+                    {
+                        "drv_path": "/nix/store/diffdrv0000000000000000000000000000-Diff-9.99.0.drv",
+                        "name": "Diff-9.99.0",
+                        "pname": "Diff",
+                        "children": [],
+                    }
+                ],
+            },
+            {
+                "drv_path": "/nix/store/sysdrv000000000000000000000000000000-nixos-system-example-24.11.drv",
+                "name": "nixos-system-example-24.11",
+                "pname": "nixos-system-example",
+                "children": [
+                    {
+                        "drv_path": "/nix/store/shcdrv00000000000000000000000000000-ShellCheck-9.99.0.drv",
+                        "name": "ShellCheck-9.99.0",
+                        "pname": "ShellCheck",
+                        "children": [],
+                    }
+                ],
+            },
+        ]
+        result = TreeMergerImpl().merge_trees(trees)
+        self.assertIsInstance(result, dict)
+
+
+if __name__ == "__main__":
+    import sys
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    unittest.main()

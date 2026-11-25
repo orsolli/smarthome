@@ -1,0 +1,116 @@
+"""Normalizer module for converting dependency trees to flat database records.
+
+Produces a flat list of (package_name, drv_path, severity) tuples
+suitable for insertion into the vulnerability_events table.
+
+The normalizer receives vulnerability info as a dict (vuln_map) via
+the normalize() method rather than importing mock_vulnix directly.
+This allows dependency injection for testing and production use.
+"""
+
+from typing import Any
+
+from interfaces import TreeNormalizerInterface
+from core.severity import severity_from_cvss
+
+
+def _severity_from_cvss(cvss_score: float) -> str:
+    """Convert a CVSS score to a severity label.
+
+    Args:
+        cvss_score: CVSS v3 base score.
+
+    Returns:
+        Severity label string.
+    """
+    return severity_from_cvss(cvss_score)
+
+def _cvss_from_severity(severity: str) -> float:
+    """Convert a severity label back to a CVSS score for storage.
+
+    Args:
+        severity: Severity label string.
+
+    Returns:
+        Representative CVSS score for the severity level.
+    """
+    mapping = {
+        "CRITICAL": 9.0,
+        "HIGH": 7.0,
+        "MEDIUM": 4.0,
+        "LOW": 0.1,
+        "NONE": 0.0,
+    }
+    return mapping.get(severity.upper(), 0.0)
+
+
+class TreeNormalizerImpl(TreeNormalizerInterface):
+    """Implementation of TreeNormalizerInterface.
+
+    Traverses a merged dependency tree and extracts vulnerability records
+    by looking up each node's drv_path in the provided vuln_map.
+    """
+
+    def normalize(
+        self,
+        tree: dict[str, Any],
+        vuln_map: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Convert a dependency tree into flat vulnerability records.
+
+        Args:
+            tree: A merged dependency tree dict.
+            vuln_map: Dict mapping drv_path to vulnerability info.
+
+        Returns:
+            List of dicts with keys: package_name, drv_path, severity.
+        """
+        vulnerability_events: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        _traverse_tree(tree, vulnerability_events, vuln_map, seen)
+        return vulnerability_events
+
+
+def _traverse_tree(
+    node: dict[str, Any],
+    vulnerability_events: list[dict[str, Any]],
+    vuln_map: dict[str, Any] | None,
+    seen: set[tuple[str, str]] | None = None,
+) -> None:
+    """Recursively traverse a tree and collect vulnerability records.
+
+    Args:
+        node: Current tree node.
+        vulnerability_events: Accumulator list for found vulnerability_events.
+        vuln_map: Dict mapping drv_path to vulnerability info.
+        seen: Set of already-seen (pname, drv_path) tuples for dedup.
+    """
+    pname = node.get("pname", "")
+    drv_path = node.get("drv_path", "")
+
+    if not pname and not drv_path:
+        return
+
+    # Deduplicate by (pname, drv_path)
+    if seen is not None and (pname, drv_path) in seen:
+        return
+    if seen is not None:
+        seen.add((pname, drv_path))
+
+    # Look up vulnerability info
+    vuln_info = vuln_map.get(drv_path, {}) if vuln_map else {}
+    if vuln_info:
+        cvss_scores = vuln_info.get("cvssv3_basescore", {})
+        max_score = max(cvss_scores.values()) if cvss_scores else 0.0
+        severity = _severity_from_cvss(max_score)
+        vulnerability_events.append(
+            {
+                "package_name": pname or drv_path,
+                "drv_path": drv_path,
+                "severity": severity,
+                "severity_score": max_score,
+            }
+        )
+
+    for child in node.get("children", []):
+        _traverse_tree(child, vulnerability_events, vuln_map, seen)

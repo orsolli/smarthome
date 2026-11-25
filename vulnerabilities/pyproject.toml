@@ -1,0 +1,18 @@
+[build-system]
+requires = [ "setuptools" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vulnerabilities"
+version = "0.1"
+dependencies = [
+    "bottle",
+]
+
+[tool.setuptools.packages.find]
+include = ["app*", "core*", "interfaces*", "mock*"]
+exclude = ["data*", "result*", "tests*"]
+
+[project.scripts]
+vuln-web = "app.app:main"
+vuln-scanner = "app.app:cli_main"

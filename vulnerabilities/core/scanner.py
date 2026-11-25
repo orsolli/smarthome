@@ -1,0 +1,405 @@
+"""Scan pipeline orchestrator for the vulnerability scanner.
+
+This module provides the ScanPipeline class that orchestrates the full
+vulnerability scan workflow by wiring together pipeline stage interfaces.
+
+Usage:
+    pipeline = ScanPipeline.default()
+    result = pipeline.run_scan("/run/current-system")
+"""
+
+from typing import Any
+import os
+from datetime import datetime
+
+from interfaces import (
+    DependencyMapperInterface,
+    DerivationSourceInterface,
+    StorageInterface,
+    TreeOrchestratorInterface,
+    TreeNormalizerInterface,
+    VulnerabilityScannerInterface,
+)
+from core.orchestrator import TreeOrchestrator
+from core.parser import TreeParserImpl
+from core.merger import TreeMergerImpl
+from core.formatter import TreeFormatterImpl
+from mock.mock_derivation import MockDerivationSource
+from mock.mock_vulnix import MockVulnerabilityScanner
+from mock.mock_why_depends import MockDependencyMapper
+from core.normalizer import TreeNormalizerImpl
+from core.identity import version_from_drv, compressed_lineages
+from core.real_scanner import (
+    RealDerivationSource,
+    RealVulnerabilityScanner,
+    RealDependencyMapper,
+)
+
+
+class MockStorage(StorageInterface):
+    """Mock implementation of StorageInterface for development."""
+
+    def __init__(self):
+        self._scans: list[dict] = []
+        self._events: list[dict] = []
+        self._nodes: list[dict] = []
+        self._next_id_counter = 1
+
+    def _next_id(self) -> int:
+        current = self._next_id_counter
+        self._next_id_counter += 1
+        return current
+
+    def insert_scan(
+        self,
+        target: str,
+        timestamp: str | None = None,
+        scanned_path: str | None = None,
+    ) -> int:
+        scan_id = self._next_id()
+        self._scans.append(
+            {
+                "id": scan_id,
+                "target": target,
+                "timestamp": timestamp,
+                "scanned_path": scanned_path or target,
+            }
+        )
+        return scan_id
+
+    def insert_vulnerability_event(
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        severity: str,
+        version: str | None = None,
+        timestamp: str | None = None,
+    ) -> int:
+        event_id = self._next_id()
+        self._events.append({
+            "id": event_id,
+            "scan_id": scan_id,
+            "package_name": package_name,
+            "version": version if version is not None else version_from_drv(drv_path, package_name),
+            "drv_path": drv_path,
+            "severity": severity,
+            "timestamp": timestamp,
+        })
+        return event_id
+
+    def insert_dependency_node(
+        self,
+        scan_id: int,
+        package_name: str,
+        drv_path: str,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
+    ) -> int:
+        node_id = self._next_id()
+        self._nodes.append({
+            "id": node_id,
+            "scan_id": scan_id,
+            "package_name": package_name,
+            "version": version if version is not None else version_from_drv(drv_path, package_name),
+            "lineage": lineage,
+            "drv_path": drv_path,
+            "parent_id": parent_id,
+            "child_id": child_id,
+            "vulnerability_event_id": vulnerability_event_id,
+        })
+        return node_id
+
+    def update_dependency_node(
+        self,
+        id: int,
+        scan_id: int | None = None,
+        package_name: str | None = None,
+        drv_path: str | None = None,
+        parent_id: int | None = None,
+        child_id: int | None = None,
+        vulnerability_event_id: int | None = None,
+        version: str | None = None,
+        lineage: str | None = None,
+    ) -> int:
+        existing = next((n for n in self._nodes if n["id"] == id), None)
+        if not existing:
+            raise ValueError(f"Node with ID {id} does not exist")
+        if scan_id is not None:
+            existing["scan_id"] = scan_id
+        if package_name is not None:
+            existing["package_name"] = package_name
+        if drv_path is not None:
+            existing["drv_path"] = drv_path
+        if parent_id is not None:
+            existing["parent_id"] = parent_id
+        if child_id is not None:
+            existing["child_id"] = child_id
+        if vulnerability_event_id is not None:
+            existing["vulnerability_event_id"] = vulnerability_event_id
+        if version is not None:
+            existing["version"] = version
+        if lineage is not None:
+            existing["lineage"] = lineage
+        return id
+
+
+class ScanPipeline:
+    """Orchestrates the full vulnerability scan workflow.
+
+    Takes dependency-injected pipeline stages and runs them in sequence:
+    1. DerivationSource: resolve target to derivation
+    2. VulnerabilityScanner: scan for vulnerabilities
+    3. DependencyMapper: get dependency trees for each vuln
+    4. TreeMerger: merge all trees into one
+    5. TreeNormalizer: convert to flat vulnerability records
+    6. Storage: persist results
+
+    Usage:
+        pipeline = ScanPipeline.default()
+        result = pipeline.run_scan("/run/current-system")
+    """
+
+    def __init__(
+        self,
+        derivation_source: DerivationSourceInterface,
+        vulnerability_scanner: VulnerabilityScannerInterface,
+        dependency_mapper: DependencyMapperInterface,
+        orchestrator: TreeOrchestratorInterface,
+        tree_normalizer: TreeNormalizerInterface,
+        storage: StorageInterface,
+    ):
+        """Initialize with injected pipeline stages.
+
+        Args:
+            derivation_source: Resolves target to derivation.
+            vulnerability_scanner: Scans derivation for vulns.
+            dependency_mapper: Maps vulns to dependency trees.
+            orchestrator: Merges multiple trees into one.
+            tree_normalizer: Normalizes tree to flat records.
+            storage: Persists scan results.
+        """
+        self.derivation_source = derivation_source
+        self.vulnerability_scanner = vulnerability_scanner
+        self.dependency_mapper = dependency_mapper
+        self.orchestrator = orchestrator
+        self.tree_normalizer = tree_normalizer
+        self.storage = storage
+
+    @classmethod
+    def default(cls) -> "ScanPipeline":
+        """Create a pipeline with mock or real implementations.
+
+        If VULNIX_PATH is set, uses real Nix tooling.
+        Otherwise falls back to mock implementations.
+
+        Returns:
+            A ScanPipeline configured for the current environment.
+        """
+        vulnix_path = os.environ.get("VULNIX_PATH")
+        if vulnix_path:
+            return cls(
+                derivation_source=RealDerivationSource(),
+                vulnerability_scanner=RealVulnerabilityScanner(),
+                dependency_mapper=RealDependencyMapper(),
+                orchestrator=TreeOrchestrator(
+                    parser=TreeParserImpl(),
+                    merger=TreeMergerImpl(),
+                    formatter=TreeFormatterImpl(),
+                ),
+                tree_normalizer=TreeNormalizerImpl(),
+                storage=MockStorage(),
+            )
+        return cls(
+            derivation_source=MockDerivationSource(),
+            vulnerability_scanner=MockVulnerabilityScanner(),
+            dependency_mapper=MockDependencyMapper(),
+            orchestrator=TreeOrchestrator(
+                parser=TreeParserImpl(),
+                merger=TreeMergerImpl(),
+                formatter=TreeFormatterImpl(),
+            ),
+            tree_normalizer=TreeNormalizerImpl(),
+            storage=MockStorage(),
+        )
+
+    def run_scan(
+        self,
+        target: str,
+        label: str | None = None,
+        timestamp: str | None = None,
+    ) -> dict[str, Any]:
+        """Run a full vulnerability scan on the given target.
+
+        Steps:
+            1. Resolve derivation via DerivationSource
+            2. Scan for vulnerabilities via VulnerabilityScanner
+            3. Map dependencies via DependencyMapper
+            4. Merge trees via TreeOrchestrator
+            5. Normalize to flat records via TreeNormalizer
+            6. Persist to storage
+
+        Args:
+            target: The derivation path to scan.
+            label: Identity the scan is recorded under. Defaults to target.
+                Passing an alias lets an old Nix generation (a different
+                derivation of the same system) join the timeline of
+                /run/current-system.
+            timestamp: ISO timestamp to record, for backfills of
+                generations that were activated on an earlier date.
+
+        Returns:
+            Dict with scan results summary.
+        """
+        identity = label or target
+        # Step 1: Resolve derivation
+        derivations = self.derivation_source.show_derivation(target)
+        system_derivation = next(iter(derivations), None)
+        if not system_derivation:
+            return {"error": "No derivation found for target", "target": target}
+        system_derivation = f'/nix/store/{system_derivation}'
+
+        # Step 2: Scan for vulnerabilities
+        vulns = self.vulnerability_scanner.scan_vulnerabilities(system_derivation)
+
+        # Build vuln_map: drv_path -> vuln_record
+        vuln_map: dict[str, Any] = {}
+        for vuln in vulns:
+            drv = vuln.get("derivation", "")
+            if drv:
+                vuln_map[drv] = vuln
+
+        # Step 3: Get dependency trees for each vulnerability
+        dep_trees: str = ""
+        for vuln in vulns:
+            drv = vuln.get("derivation", "")
+            tree = self.dependency_mapper.why_depends(system_derivation, drv)
+            dep_trees = f"{dep_trees}\n{tree}"
+
+        # Step 4: Merge trees
+        merged = self.orchestrator.process_tree_output(dep_trees)['tree']
+
+        # Step 5: Normalize to flat records using the vuln_map from step 2
+        vulnerability_events = self.tree_normalizer.normalize(merged, vuln_map)
+
+        # Step 6: Persist to storage. Events inherit the scan timestamp so a
+        # backfilled generation is dated when it ran, not when it was scanned.
+        scan_time = timestamp or datetime.utcnow().isoformat()
+        scan_id = self.storage.insert_scan(identity, scan_time, scanned_path=target)
+        for record in vulnerability_events:
+            record['event_id'] = self.storage.insert_vulnerability_event(
+                scan_id,
+                record["package_name"],
+                record["drv_path"],
+                record["severity"],
+                timestamp=scan_time,
+            )
+        self._store_tree_nodes(
+            scan_id, merged, {v["drv_path"]: v for v in vulnerability_events}, identity
+        )
+
+        return {
+            "scan_id": scan_id,
+            "target": identity,
+            "scanned_path": target,
+            "timestamp": scan_time,
+            "vulnerabilities_found": len(vulnerability_events),
+            "vulnerabilities": vulnerability_events,
+        }
+
+    @staticmethod
+    def _flatten_tree(tree: dict) -> list[tuple[dict, int | None]]:
+        """Depth-first list of (node, index of its parent) for a merged tree.
+
+        Parents always appear before their children, so a node can be stored
+        with its lineage already computed and its database id known.
+        """
+        flat: list[tuple[dict, int | None]] = []
+        stack: list[tuple[dict, int | None]] = [(tree, None)]
+        while stack:
+            node, parent_index = stack.pop()
+            index = len(flat)
+            flat.append((node, parent_index))
+            for child in reversed(node.get("children", [])):
+                stack.append((child, index))
+        return flat
+
+    def _store_tree_nodes(
+        self,
+        scan_id: int,
+        tree: dict,
+        vuln_events: dict[str, Any],
+        root_label: str,
+    ) -> dict[str, Any]:
+        """Store every node of a dependency tree, with its identity.
+
+        Args:
+            scan_id: The scan ID.
+            tree: The dependency tree dict.
+            vuln_events: Vulnerability events keyed by drv_path.
+            root_label: The scan target, used as the root of every lineage.
+
+        Returns:
+            Dict with node id and severity_score of the tree root.
+        """
+        flat = self._flatten_tree(tree)
+
+        def name_of(node: dict) -> str:
+            return node.get("pname", node.get("name", "")) or node.get("drv_path", "")
+
+        valid = [index for index, (node, _) in enumerate(flat) if name_of(node)]
+        provisional = [
+            {
+                "id": index,
+                "package_name": name_of(flat[index][0]),
+                "parent_id": flat[index][1] if flat[index][1] in valid else None,
+            }
+            for index in valid
+        ]
+        lineages = compressed_lineages(provisional, root_label)
+
+        children_of: dict[int, list[int]] = {}
+        for index, (_, parent_index) in enumerate(flat):
+            if parent_index is not None:
+                children_of.setdefault(parent_index, []).append(index)
+
+        node_ids: dict[int, int] = {}
+        for index in valid:
+            node = flat[index][0]
+            name = name_of(node)
+            drv_path = node.get("drv_path", "")
+            parent_index = flat[index][1]
+            node_ids[index] = self.storage.insert_dependency_node(
+                scan_id,
+                name,
+                drv_path,
+                parent_id=node_ids.get(parent_index) if parent_index is not None else None,
+                vulnerability_event_id=vuln_events.get(drv_path, {}).get("event_id"),
+                version=version_from_drv(drv_path, name),
+                lineage=lineages[index],
+            )
+
+        # Bottom-up pass: a node's score is the worst score in its subtree, and
+        # child_id points at the child that caused it.
+        scores: dict[int, int] = {}
+        for index in reversed(valid):
+            drv_path = flat[index][0].get("drv_path", "")
+            score = vuln_events.get(drv_path, {}).get("severity_score", 0)
+            top_child = None
+            for child in children_of.get(index, []):
+                if scores.get(child, 0) > score:
+                    score = scores[child]
+                    top_child = child
+            scores[index] = score
+            if top_child is not None:
+                self.storage.update_dependency_node(
+                    node_ids[index], child_id=node_ids[top_child]
+                )
+
+        root = valid[0] if valid else None
+        if root is None:
+            return {"id": 0, "severity_score": 0}
+        return {"id": node_ids[root], "severity_score": scores[root]}
